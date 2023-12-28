@@ -2,7 +2,7 @@ use rand::Rng;
 
 use super::{
     ast::Node,
-    tokens::{Token, TokenFamily, TokenKind},
+    lexer::{Token, TokenFamily, TokenKind},
 };
 
 // function helpers
