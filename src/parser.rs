@@ -26,8 +26,9 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Vec<Node> {
         }
 
         let varname = parse_operand(tokens, index);
-
+        
         token = get_current(tokens, index);
+        
         //parsing colon
         // varname^: Typename
         match token.kind {
@@ -47,7 +48,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Vec<Node> {
         // parsing type
         // varname: ^Typename
         let typename = parse_operand(tokens, index);
-
+        
         // consume comma if there is one.
         if get_current(tokens, index).kind == TokenKind::Comma {
             *index += 1;
@@ -237,7 +238,6 @@ pub fn get_current<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> &'a Token {
         panic!("Unexpected end of tokens")
     }
 }
-
 pub fn consume_newlines<'a>(index: &mut usize, tokens: &'a Vec<Token>) -> &'a Token {
     let mut current = get_current(tokens, index);
     while current.kind == TokenKind::Newline {
@@ -627,7 +627,6 @@ fn parse_lambda(tokens: &Vec<Token>, index: &mut usize) -> Node {
         _ => panic!("Expected lambda expression"),
     }
 }
-
 pub fn generate_random_function_name() -> String {
     let mut rng = rand::thread_rng();
     let letters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
@@ -636,7 +635,6 @@ pub fn generate_random_function_name() -> String {
         .collect();
     name
 }
-
 fn parse_params(tokens: &Vec<Token>, index: &mut usize) -> Vec<Node> {
     let mut params = Vec::new();
     while get_current(tokens, index).kind != TokenKind::Pipe {
@@ -651,7 +649,6 @@ fn parse_params(tokens: &Vec<Token>, index: &mut usize) -> Vec<Node> {
     *index += 1; // Skip over the closing Pipe token
     params
 }
-
 fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
     let current = get_current(tokens, index);
     if current.kind != expected {
@@ -1080,138 +1077,77 @@ fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Node {
 }
 
 fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
-    if let Some(identifier) = tokens.get(*index) {
-        *index += 1;
-        let node = match identifier.kind {
-            TokenKind::LogicalOr => {
-                *index -= 1;
-                parse_lambda(tokens, index)
-            }
-            TokenKind::Pipe => {
-                *index -= 1;
-                parse_lambda(tokens, index)
-            },
-            TokenKind::Number => {
-                let int = identifier.value.parse::<i32>();
-                let float = identifier.value.parse::<f64>();
+    let identifier = tokens.get(*index).expect("Unexpected end of tokens");
+    *index += 1;
+    
+    match identifier.kind {
+        TokenKind::LogicalOr | TokenKind::Pipe => {
+            *index -= 1;
+            parse_lambda(tokens, index)
+        },
+        TokenKind::Number => {
+            let int = identifier.value.parse::<i32>();
+            let float = identifier.value.parse::<f64>();
 
-                if int.is_ok() {
-                    return Node::Int(int.unwrap());
-                } else if float.is_ok() {
-                    return Node::Double(float.unwrap());
-                } else {
-                    dbg!(identifier);
-                    panic!("Expected number token");
-                }
-            }
-            TokenKind::Identifier => {
-                let iden = Node::Identifier(identifier.value.clone());
-                iden
-            }
-            TokenKind::New => {
-                let token = get_current(tokens, index);
-                if token.kind == TokenKind::Identifier {
-                    let structname = token.clone();
+            int.map(Node::Int).unwrap_or_else(|_| float.map(Node::Double).unwrap())
+        }
+        TokenKind::Identifier => Node::Identifier(identifier.value.clone()),
+        TokenKind::New => {
+            let token = get_current(tokens, index);
+            assert_eq!(token.kind, TokenKind::Identifier, "Expected identifier token");
 
-                    *index += 1;
+            let structname = token.clone();
+            *index += 1;
+            
+            let token = get_current(tokens, index);
+            assert!(token.kind == TokenKind::OpenCurlyBrace || token.kind == TokenKind::OpenParenthesis, "Expected open curly brace token");
+            *index += 1;
 
-                    let token = get_current(tokens, index);
-
-                    if token.kind != TokenKind::OpenCurlyBrace
-                        && token.kind != TokenKind::OpenParenthesis
-                    {
-                        dbg!(token);
-                        panic!("Expected open curly brace token");
-                    } else {
-                        *index += 1;
-                    }
-
-                    return parse_struct_init(tokens, index, &structname);
-                } else {
-                    dbg!(token);
-                    panic!("Expected identifier token");
-                }
-            }
-            TokenKind::String => {
-                let id = Node::String(identifier.value.clone());
-                id
-            }
-            TokenKind::OpenBracket => {
-                let init = parse_array_initializer(tokens, index);
-
-                // todo: this is a hack. we need to know if the array is mutable or not by normal means.
-                let array_mutable = true;
-                let elements_mutable = false;
-                return new_array(
-                    "Dynamic".to_string(),
-                    init.len(),
-                    init.clone(),
-                    array_mutable,
-                    elements_mutable,
-                );
-            }
-            TokenKind::OpenParenthesis => {
-                // todo: add value tuples maybe an epic syntax
-
-                let node = parse_expression(tokens, index);
-                if let Some(token) = tokens.get(*index) {
-                    if token.kind != TokenKind::CloseParenthesis {
-                        dbg!(token);
-                        panic!("Expected close parenthesis token");
-                    }
-                    *index += 1;
-                }
-                node
-            }
-            TokenKind::Bool => {
-                let boolean = Node::Bool(identifier.value.parse::<bool>().unwrap());
-                boolean
-            }
-            // todo: add a way to have a set of keywords be also operands
-            TokenKind::Repeat => {
-                let next = get_current(tokens, index);
-                let stmnt = parse_repeat_stmnt(next, index, tokens);
-                stmnt.unwrap()
-            }
-            _ => {
-                dbg!(identifier);
-                panic!("Expected number or identifier token");
-            }
-        };
-        node
-    } else {
-        panic!("Unexpected end of tokens")
+            parse_struct_init(tokens, index, &structname)
+        },
+        TokenKind::String => Node::String(identifier.value.clone()),
+        TokenKind::OpenBracket => {
+            let init = parse_array_initializer(tokens, index);
+            new_array("Dynamic".to_string(), init.len(), init.clone(), true, false)
+        },
+        TokenKind::OpenParenthesis => {
+            let node = parse_expression(tokens, index);
+            assert_eq!(tokens.get(*index).map(|t| t.kind), Some(TokenKind::CloseParenthesis), "Expected close parenthesis token");
+            *index += 1;
+            node
+        },
+        TokenKind::Bool => Node::Bool(identifier.value.parse::<bool>().unwrap()),
+        TokenKind::Repeat => parse_repeat_stmnt(get_current(tokens, index), index, tokens).unwrap(),
+        _ => panic!("Expected number or identifier token"),
     }
 }
-
 fn parse_struct_init(tokens: &Vec<Token>, index: &mut usize, identifier: &Token) -> Node {
     let mut args = Vec::new();
-
-    loop {
-        let token = get_current(tokens, index);
-
-        if token.kind == TokenKind::Newline {
-            *index += 1;
-            continue;
-        }
-
-        // paramless.
-        if token.kind == TokenKind::CloseCurlyBrace || token.kind == TokenKind::CloseParenthesis {
-            *index += 1;
+    
+    loop
+    {
+        if *index >= tokens.len() {
             break;
         }
-        // accumulate parameter expressions
-        let arg = parse_expression(tokens, index);
-
-        // skip commas
-        if get_current(tokens, index).kind == TokenKind::Comma {
-            *index += 1;
+         
+        let token = get_current(tokens, index);
+        match token.kind {
+            TokenKind::Newline => *index += 1,
+            TokenKind::CloseCurlyBrace | TokenKind::CloseParenthesis => {
+                *index += 1;
+                break;
+            },
+            _ => {
+                args.push(parse_expression(tokens, index));
+                if get_current(tokens, index).kind == TokenKind::Comma {
+                    *index += 1;
+                }
+            }
         }
-
-        args.push(arg);
     }
-    Node::Struct {
+    
+    return Node::Struct {
         id: identifier.value.clone(),
         args,
-    }
+    };
 }
