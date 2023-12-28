@@ -2,17 +2,13 @@ pub mod ast;
 pub mod lexer;
 pub mod parser;
 
-pub fn main() {
-    
-}
-
 
 #[cfg(test)]
 mod tests {
     use lexer::{create_tokenizer, TokenProcessor};
-
+    
     use super::*;
-
+    
     #[test]
     fn test_main() {
         // todo: make testing much much better in this project.
