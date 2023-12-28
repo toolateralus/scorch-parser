@@ -638,13 +638,11 @@ pub fn generate_random_function_name() -> String {
 fn parse_params(tokens: &Vec<Token>, index: &mut usize) -> Vec<Node> {
     let mut params = Vec::new();
     while get_current(tokens, index).kind != TokenKind::Pipe {
-        let expr = parse_expression(tokens, index);
+        params.push(parse_expression(tokens, index));
         
         if get_current(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-        
-        params.push(expr);
     }
     *index += 1; // Skip over the closing Pipe token
     params
@@ -708,34 +706,23 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, ()> {
     if *index >= tokens.len() {
         return Err(());
     }
-
+    
     let first = consume_newlines(index, tokens);
-
+    
     if *index + 1 >= tokens.len() {
         return Err(()); // probably a newline
     }
-
+    
     let second = tokens.get(*index + 1).unwrap();
-
-    // NOTE:: next is ahead one and must be discarded.
-    // NOTE:: token is the current, but must also be discarded.
-    // any branch of this must move the index forward at least once.
+    
     match first.family {
         TokenFamily::Keyword => parse_keyword_ops(first, index, second, tokens),
         TokenFamily::Identifier => match second.kind {
-            TokenKind::ColonEquals | TokenKind::Colon | TokenKind::Assignment => {
-                return parse_decl(first, index, tokens, false);
-            }
-            _ => {
-                let node = parse_expression(tokens, index);
-                Ok(node)
-            }
+            TokenKind::ColonEquals | TokenKind::Colon | TokenKind::Assignment => parse_decl(first, index, tokens, false),
+            _ => Ok(parse_expression(tokens, index)),
         },
         TokenFamily::Operator | TokenFamily::Value => Ok(parse_expression(tokens, index)),
-        _ => {
-            dbg!(first);
-            panic!("Expected keyword, identifier or operator token");
-        }
+        _ => panic!("Expected keyword, identifier or operator token"),
     }
 }
 fn parse_keyword_ops(
@@ -769,52 +756,44 @@ fn parse_struct_decl(
     *index += 2; // consume 'struct && identifier'
 
     let id = identifier.value.clone();
-    let token = get_current(tokens, index);
-
+    let mut token = get_current(tokens, index);
+    
     if token.kind != TokenKind::Pipe {
-        dbg!(token);
         panic!("Expected pipe to open body for type definition");
     }
-
+    
     let mut statements = Vec::new();
-
-    let mut token = consume_newlines(index, tokens);
-
+    
+    token = consume_newlines(index, tokens);
+    
     if token.kind == TokenKind::Pipe {
         *index += 1;
     }
     while *index < tokens.len() {
         token = consume_newlines(index, tokens);
 
-        let mut mutable = false;
-
-        if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
-            mutable = true;
+        let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
             *index += 1;
-            token = consume_newlines(index, tokens);
-        }
+            consume_newlines(index, tokens);
+            true
+        } else {
+            false
+        };
 
         if token.kind == TokenKind::Pipe {
             *index += 1;
             break;
         }
 
-        let statement = parse_decl(token, index, tokens, mutable);
-
-        match statement {
+        match parse_decl(token, index, tokens, mutable) {
             Ok(node) => statements.push(Box::new(node)),
-            Err(_) => {
-                println!("Block encountered unexpected token:");
-                dbg!(&token);
-                panic!("Expected statement node");
-            }
+            Err(_) => panic!("Expected statement node"),
         }
 
         token = get_current(tokens, index);
 
         if token.kind == TokenKind::Comma {
             *index += 1;
-            continue;
         }
     }
     Ok(Node::StructDecl {
@@ -830,25 +809,22 @@ fn parse_var(
 ) -> Result<Node, ()> {
     // consume 'var'
     *index += 1;
-    let varname = second;
-    match parse_decl(varname, index, tokens, true) {
-        Ok(node) => Ok(node),
-        Err(_) => {
-            dbg!(first);
-            panic!("Expected declaration statement");
-        }
-    }
+    parse_decl(second, index, tokens, true).map_err(|_| {
+        dbg!(first);
+        panic!("Expected declaration statement");
+    })
 }
+
 fn parse_break(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result<Node, ()> {
     *index += 1;
     // discard break
-    if second.kind == TokenKind::Newline {
-        Ok(Node::BreakStmnt(Option::None))
-    } else if second.kind != TokenKind::CloseCurlyBrace {
-        let value = parse_expression(tokens, index);
-        Ok(Node::BreakStmnt(Option::Some(Box::new(value))))
-    } else {
-        panic!("break statements must be followed by a newline or a return value.");
+    match second.kind {
+        TokenKind::Newline => Ok(Node::BreakStmnt(None)),
+        _ if second.kind != TokenKind::CloseCurlyBrace => {
+            let value = parse_expression(tokens, index);
+            Ok(Node::BreakStmnt(Some(Box::new(value))))
+        }
+        _ => panic!("break statements must be followed by a newline or a return value."),
     }
 }
 fn parse_const(
@@ -870,11 +846,10 @@ fn parse_const(
 }
 fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let mut left = parse_logical(tokens, index);
-    loop {
-        let token = get_current(tokens, index);
+
+    while let Some(token) = tokens.get(*index) {
         match token.kind {
-            TokenKind::LogicalAnd |
-            TokenKind::LogicalOr => {
+            TokenKind::LogicalAnd | TokenKind::LogicalOr => {
                 *index += 1;
                 let right = parse_logical(tokens, index);
                 left = Node::LogicalExpression {
@@ -883,27 +858,18 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Node {
                     rhs: Box::new(right),
                 };
             }
-            // these 5 token kinds are expression delimiters, but
-            // the tokens are expected to be consumed by the caller of this function.
             TokenKind::CloseParenthesis
             | TokenKind::CloseBracket
             | TokenKind::OpenCurlyBrace
-            | TokenKind::CloseCurlyBrace // for struct init, questonable
+            | TokenKind::CloseCurlyBrace
             | TokenKind::Pipe
             | TokenKind::Newline
             | TokenKind::Comma
-            | TokenKind::Eof => {
-                break;
-            }
-            _ => {
-                println!("left");
-                dbg!(left);
-                println!("token");
-                dbg!(token);
-                panic!("unexpected token");
-            }
+            | TokenKind::Eof => break,
+            _ => panic!("unexpected token"),
         }
     }
+
     Node::Expression(Box::new(left))
 }
 fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Node {
@@ -926,6 +892,7 @@ fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Node {
 }
 fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let mut left = parse_bin_op(tokens, index);
+
     while let Some(token) = tokens.get(*index) {
         match token.kind {
             TokenKind::Equals
@@ -943,28 +910,20 @@ fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Node {
                 };
             }
             _ => break,
-        };
+        }
     }
+
     left
 }
 fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let mut left = parse_term(tokens, index);
     while let Some(token) = tokens.get(*index) {
         match token.kind {
-            TokenKind::Add => {
+            TokenKind::Add | TokenKind::Subtract => {
                 *index += 1;
                 let right = parse_term(tokens, index);
                 left = Node::BinaryOperation {
-                    op: TokenKind::Add,
-                    lhs: Box::new(left),
-                    rhs: Box::new(right),
-                };
-            }
-            TokenKind::Subtract => {
-                *index += 1;
-                let right = parse_term(tokens, index);
-                left = Node::BinaryOperation {
-                    op: TokenKind::Subtract,
+                    op: token.kind,
                     lhs: Box::new(left),
                     rhs: Box::new(right),
                 };
@@ -976,106 +935,80 @@ fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Node {
 }
 fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let mut left = parse_unary(tokens, index);
+    
     while let Some(token) = tokens.get(*index) {
         match token.kind {
-            TokenKind::Multiply => {
+            TokenKind::Multiply | TokenKind::Divide => {
                 *index += 1;
                 let right = parse_unary(tokens, index);
                 left = Node::BinaryOperation {
                     lhs: Box::new(left),
-                    op: TokenKind::Multiply,
-                    rhs: Box::new(right),
-                };
-            }
-            TokenKind::Divide => {
-                *index += 1;
-                let right = parse_unary(tokens, index);
-                left = Node::BinaryOperation {
-                    lhs: Box::new(left),
-                    op: TokenKind::Divide,
+                    op: token.kind,
                     rhs: Box::new(right),
                 };
             }
             _ => break,
         }
     }
+
     left
 }
 fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let op = get_current(tokens, index);
+
     match op.kind {
-        TokenKind::Subtract => {
+        TokenKind::Subtract | TokenKind::Not => {
             *index += 1;
             let node = parse_dot(tokens, index);
-            if let Node::NegOp(_node) = node {
-                panic!("Double not operations are not allowed");
-            }
-            Node::NegOp(Box::new(node))
-        }
-        TokenKind::Not => {
-            *index += 1;
-            let node = parse_dot(tokens, index);
-            if let Node::NotOp(_node) = node {
-                panic!("Double not operations are not allowed");
-            }
-            Node::NotOp(Box::new(node))
-        }
+            let node_type = if op.kind == TokenKind::Subtract { Node::NegOp } else { Node::NotOp };
+
+            assert!(!(matches!(node, Node::NegOp(_)) || matches!(node, Node::NotOp(_))), "Double not operations are not allowed");
+
+            node_type(Box::new(node))
+        },
         _ => parse_dot(tokens, index),
     }
 }
-
 fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let left = parse_accessor(tokens, index);
-    loop {
-        let op = get_current(tokens, index);
-        match op.kind {
-            TokenKind::Dot => {
-                *index += 1; // consume '.' operator.
-                return Node::BinaryOperation {
-                    lhs: Box::new(left),
-                    op: TokenKind::Dot,
-                    rhs: Box::new(parse_accessor(tokens, index)),
-                };
-            }
-            _ => {
-                return left;
-            }
-        }
-    }
-}
-fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Node {
-    let left = parse_operand(tokens, index);
     let op = get_current(tokens, index);
     match op.kind {
-        TokenKind::OpenParenthesis => {
-            if let Node::Identifier(id) = &left {
-                match parse_fn_call(index, tokens, &id) {
-                    Ok(node) => node,
-                    Err(_) => panic!("Expected function call node"),
-                }
-            } else {
-                panic!("Expected function call node");
-            }
-        }
-        TokenKind::OpenBracket => {
-            // id[]
-            if let Node::Identifier(id) = left {
-                *index += 1; // move past [
-                match parse_array_access(index, tokens, &id) {
-                    Ok(node) => node,
-                    Err(_) => panic!("Expected array access node"),
-                }
-            } else {
-                dbg!(left);
-                panic!("Expected array access node");
-            }
+        TokenKind::Dot => {
+            *index += 1; // consume '.' operator.
+            return Node::BinaryOperation {
+                lhs: Box::new(left),
+                op: TokenKind::Dot,
+                rhs: Box::new(parse_accessor(tokens, index)),
+            };
         }
         _ => {
             return left;
         }
     }
 }
+fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Node {
+    let left = parse_operand(tokens, index);
+    let op = get_current(tokens, index);
 
+    match op.kind {
+        TokenKind::OpenParenthesis => {
+            if let Node::Identifier(id) = &left {
+                parse_fn_call(index, tokens, &id).expect("Expected function call node")
+            } else {
+                panic!("Expected function call node");
+            }
+        },
+        TokenKind::OpenBracket => {
+            if let Node::Identifier(id) = left {
+                *index += 1; // move past [
+                parse_array_access(index, tokens, &id).expect("Expected array access node")
+            } else {
+                panic!("Expected array access node");
+            }
+        },
+        _ => left,
+    }
+}
 fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
     let identifier = tokens.get(*index).expect("Unexpected end of tokens");
     *index += 1;
