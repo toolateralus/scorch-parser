@@ -867,7 +867,7 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Node {
             | TokenKind::Newline
             | TokenKind::Comma
             | TokenKind::Eof => break,
-            _ => panic!("unexpected token"),
+            _ => panic!("unexpected token in expression : {}\n\nleft: {:?}", token.value, left),
         }
     }
 
