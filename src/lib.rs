@@ -14,6 +14,17 @@ mod tests {
         // todo: make testing much much better in this project.
         // tests for both tokenizer and parser, individual rules & actual unit size tests.
         let input = "
+        
+struct X |
+    
+|
+
+X :: {
+    funcy_test :=  {
+        break 100
+    }
+}
+        
 ff_addition 		:= 5.3 + 6.2
 ff_subtraction 		:= 5.3 - 6.2
 ff_multiplcation 	:= 5.3 * 6.2

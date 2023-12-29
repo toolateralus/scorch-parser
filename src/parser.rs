@@ -396,7 +396,7 @@ fn parse_decl(
 ) -> Result<Node, ()> {
     // varname : type = default;
     let id = token.value.clone();
-
+    
     *index += 1;
 
     let operator = get_current(tokens, index);
@@ -808,12 +808,12 @@ fn parse_type_assoc_decl_block(index: &mut usize, tokens: &Vec<Token>, statement
             false
         };
 
-        if token.kind == TokenKind::Pipe {
+        if token.kind == TokenKind::CloseCurlyBrace {
             *index += 1;
             break;
         }
     
-        match parse_statement(tokens, index) {
+        match parse_decl(token, index, tokens, mutable) {
             Ok(node) => {
                 
                 let is_valid = match node {
@@ -832,7 +832,7 @@ fn parse_type_assoc_decl_block(index: &mut usize, tokens: &Vec<Token>, statement
     
         token = get_current(tokens, index);
     
-        if token.kind == TokenKind::Comma {
+        if token.kind == TokenKind::Comma || token.kind == TokenKind::Newline {
             *index += 1;
         }
     }
