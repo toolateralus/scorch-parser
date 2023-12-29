@@ -1050,7 +1050,7 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
         },
         TokenKind::Bool => Node::Bool(identifier.value.parse::<bool>().unwrap()),
         TokenKind::Repeat => parse_repeat_stmnt(get_current(tokens, index), index, tokens).unwrap(),
-        _ => panic!("Expected number or identifier token"),
+        _ => panic!("Expected number or identifier token, instead got {:?}", identifier),
     }
 }
 fn parse_struct_init(tokens: &Vec<Token>, index: &mut usize, identifier: &Token) -> Node {
