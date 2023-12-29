@@ -1,4 +1,14 @@
 use super::lexer::TokenKind;
+
+pub const ARRAY_TNAME : &str = "array";
+pub const INT_TNAME : &str = "int";
+pub const DOUBLE_TNAME : &str = "double";
+pub const BOOL_TNAME : &str = "bool";
+pub const STRING_TNAME : &str = "string";
+pub const NONE_TNAME : &str = "none";
+pub const DYNAMIC_TNAME : &str = "dynamic";
+pub const FN_TNAME : &str = "fn";
+
 pub trait Visitor<T> {
     fn visit_number(&mut self, node: &Node) -> T;
     fn visit_term(&mut self, node: &Node) -> T;

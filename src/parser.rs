@@ -1,5 +1,7 @@
 use rand::Rng;
 
+use crate::ast::{DOUBLE_TNAME, STRING_TNAME, BOOL_TNAME};
+
 use super::{
     ast::Node,
     lexer::{Token, TokenFamily, TokenKind},
@@ -113,11 +115,11 @@ pub fn parse_fn_decl(
 }
 pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Node {
     let default_value_expression = match target_type.as_str() {
-        "double" => Node::Expression(Box::new(Node::Double(0.0))),
-        "int" => Node::Expression(Box::new(Node::Int(0))),
-        "string" => Node::Expression(Box::new(Node::String(String::from("")))),
-        "bool" => Node::Expression(Box::new(Node::Bool(false))),
-        "array" => {
+        DOUBLE_TNAME => Node::Expression(Box::new(Node::Double(0.0))),
+        INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
+        STRING_TNAME => Node::Expression(Box::new(Node::String(String::from("")))),
+        BOOL_TNAME => Node::Expression(Box::new(Node::Bool(false))),
+        ARRAY_TNAME => {
             let elements = Vec::new();
             let init_capacity = elements.len();
             let typename = String::from("dynamic");
