@@ -841,7 +841,7 @@ fn parse_const(
         Ok(node) => Ok(node),
         Err(_) => {
             dbg!(first);
-            panic!("Expected declaration statement");
+            panic!("Expected declaration statement, got {:?}", varname);
         }
     }
 }
@@ -994,9 +994,10 @@ fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Node {
     match op.kind {
         TokenKind::OpenParenthesis => {
             if let Node::Identifier(id) = &left {
-                parse_fn_call(index, tokens, &id).expect("Expected function call node")
+                parse_fn_call(index, tokens, &id)
+                .expect("Expected function call node, got")
             } else {
-                panic!("Expected function call node");
+                panic!("Expected function call node, got {:?}", left);
             }
         },
         TokenKind::OpenBracket => {
@@ -1004,14 +1005,14 @@ fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Node {
                 *index += 1; // move past [
                 parse_array_access(index, tokens, &id).expect("Expected array access node")
             } else {
-                panic!("Expected array access node");
+                panic!("Expected array access node, got {:?}", left);
             }
         },
         _ => left,
     }
 }
 fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
-    let identifier = tokens.get(*index).expect("Unexpected end of tokens");
+    let identifier = tokens.get(*index).expect("Unexpected end of tokens, {tokens}");
     *index += 1;
     
     match identifier.kind {
@@ -1022,21 +1023,21 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
         TokenKind::Number => {
             let int = identifier.value.parse::<i32>();
             let float = identifier.value.parse::<f64>();
-
+            
             int.map(Node::Int).unwrap_or_else(|_| float.map(Node::Double).unwrap())
         }
         TokenKind::Identifier => Node::Identifier(identifier.value.clone()),
         TokenKind::New => {
             let token = get_current(tokens, index);
-            assert_eq!(token.kind, TokenKind::Identifier, "Expected identifier token");
-
+            assert_eq!(token.kind, TokenKind::Identifier, "Expected identifier token, instead got {:?}", token);
+            
             let structname = token.clone();
             *index += 1;
             
             let token = get_current(tokens, index);
             assert!(token.kind == TokenKind::OpenCurlyBrace || token.kind == TokenKind::OpenParenthesis, "Expected open curly brace token");
             *index += 1;
-
+            
             parse_struct_init(tokens, index, &structname)
         },
         TokenKind::String => Node::String(identifier.value.clone()),
