@@ -719,11 +719,31 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, ()> {
     match first.family {
         TokenFamily::Keyword => parse_keyword_ops(first, index, second, tokens),
         TokenFamily::Identifier => match second.kind {
-            TokenKind::ColonEquals | TokenKind::Colon | TokenKind::Assignment => parse_decl(first, index, tokens, false),
+            TokenKind::ColonEquals |
+            TokenKind::Colon |
+            TokenKind::Assignment => 
+            {
+                parse_decl(first, index, tokens, false)
+            }
+            TokenKind::DubColon => {
+                Ok(parse_type_assoc_block(first, index, tokens))
+            }
             _ => Ok(parse_expression(tokens, index)),
         },
         TokenFamily::Operator | TokenFamily::Value => Ok(parse_expression(tokens, index)),
         _ => panic!("Expected keyword, identifier or operator token"),
+    }
+}
+
+fn parse_type_assoc_block(typename: &Token, index: &mut usize, tokens: &Vec<Token>) -> Node {
+    *index += 1; // move past Typename
+    consume_next_if_type(tokens, index, TokenKind::DubColon);
+    consume_next_if_type(tokens, index, TokenKind::OpenCurlyBrace);
+    let mut statements = Vec::new();
+    parse_type_assoc_decl_block(index, tokens, &mut statements);
+    Node::TypeAssocBlock {
+        typename: typename.value.clone(),
+        block: Box::new(Node::Block(statements)),
     }
 }
 fn parse_keyword_ops(
@@ -770,9 +790,16 @@ fn parse_struct_decl(
     if token.kind == TokenKind::Pipe {
         *index += 1;
     }
+    parse_struct_decl_block(index, tokens, &mut statements);
+    Ok(Node::StructDecl {
+        id,
+        block: Box::new(Node::Block(statements)),
+    })
+}
+fn parse_type_assoc_decl_block(index: &mut usize, tokens: &Vec<Token>, statements: &mut Vec<Box<Node>>) {
     while *index < tokens.len() {
-        token = consume_newlines(index, tokens);
-
+        let mut token = consume_newlines(index, tokens);
+    
         let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
             *index += 1;
             consume_newlines(index, tokens);
@@ -785,22 +812,59 @@ fn parse_struct_decl(
             *index += 1;
             break;
         }
-
-        match parse_decl(token, index, tokens, mutable) {
-            Ok(node) => statements.push(Box::new(node)),
+    
+        match parse_statement(tokens, index) {
+            Ok(node) => {
+                
+                let is_valid = match node {
+                    Node::FnDeclStmnt { .. } => true,
+                    _ => false,
+                };
+                
+                if !is_valid {
+                    panic!("Expected function declaration statement in associated block, got {:?}, \n\n from : {:?}", node, statements);
+                }
+                
+                statements.push(Box::new(node))
+            },
             Err(_) => panic!("Expected statement node"),
         }
-
+    
         token = get_current(tokens, index);
-
+    
         if token.kind == TokenKind::Comma {
             *index += 1;
         }
     }
-    Ok(Node::StructDecl {
-        id,
-        block: Box::new(Node::Block(statements)),
-    })
+}
+fn parse_struct_decl_block(index: &mut usize, tokens: &Vec<Token>, statements: &mut Vec<Box<Node>>) {
+    while *index < tokens.len() {
+        let mut token = consume_newlines(index, tokens);
+    
+        let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
+            *index += 1;
+            consume_newlines(index, tokens);
+            true
+        } else {
+            false
+        };
+
+        if token.kind == TokenKind::Pipe {
+            *index += 1;
+            break;
+        }
+    
+        match parse_decl(token, index, tokens, mutable) {
+            Ok(node) => statements.push(Box::new(node)),
+            Err(_) => panic!("Expected statement node"),
+        }
+    
+        token = get_current(tokens, index);
+    
+        if token.kind == TokenKind::Comma {
+            *index += 1;
+        }
+    }
 }
 fn parse_var(
     index: &mut usize,

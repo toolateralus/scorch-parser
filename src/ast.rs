@@ -36,6 +36,7 @@ pub trait Visitor<T> {
     fn visit_bool(&mut self, node: &Node) -> T;
     fn visit_array(&mut self, node: &Node) -> T;
     fn visit_array_access(&mut self, node: &Node) -> T;
+    fn visit_type_assoc_block(&mut self, node: &Node) -> T;
     fn visit_if_stmnt(&mut self, node: &Node) -> T;
     fn visit_else_stmnt(&mut self, node: &Node) -> T;
     fn visit_struct_def(&mut self, node: &Node) -> T;
@@ -148,6 +149,7 @@ pub enum Node {
         id: String,
         args: Vec<Node>,
     },
+    TypeAssocBlock { typename: String, block: Box<Node> },
 }
 impl Node {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -180,6 +182,7 @@ impl Node {
             Node::Struct { id: _, args: _ } => visitor.visit_struct_init(self),
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::ArrayAccessExpr { .. } => visitor.visit_array_access(self),
+            Node::TypeAssocBlock { typename, block } => visitor.visit_type_assoc_block(self),
         }
     }
 }
