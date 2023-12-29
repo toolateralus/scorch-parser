@@ -1156,6 +1156,6 @@ fn parse_struct_init(tokens: &Vec<Token>, index: &mut usize, identifier: &Token)
     
     return Node::StructInit {
         id: identifier.value.clone(),
-        field_initializers: args,
+        args,
     };
 }

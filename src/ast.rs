@@ -147,7 +147,7 @@ pub enum Node {
     },
     StructInit {
         id: String,
-        field_initializers: Vec<(String, Node)>,
+        args: Vec<Node>,
     },
     TypeAssocBlock { typename: String, block: Box<Node> },
 }
@@ -179,7 +179,7 @@ impl Node {
             Node::Double(..) => visitor.visit_number(self),
             Node::Lambda { .. } => visitor.visit_lambda(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
-            Node::StructInit { id: _, field_initializers: _ } => visitor.visit_struct_init(self),
+            Node::StructInit { id: _, args: _ } => visitor.visit_struct_init(self),
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::ArrayAccessExpr { .. } => visitor.visit_array_access(self),
             Node::TypeAssocBlock { typename, block } => visitor.visit_type_assoc_block(self),
