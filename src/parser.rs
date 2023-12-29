@@ -113,15 +113,14 @@ pub fn parse_fn_decl(
 }
 pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Node {
     let default_value_expression = match target_type.as_str() {
-        "Double" => Node::Expression(Box::new(Node::Double(0.0))),
-        "Int" => Node::Expression(Box::new(Node::Int(0))),
-        "String" => Node::Expression(Box::new(Node::String(String::from("")))),
-        "Bool" => Node::Expression(Box::new(Node::Bool(false))),
-
-        "Array" => {
+        "double" => Node::Expression(Box::new(Node::Double(0.0))),
+        "int" => Node::Expression(Box::new(Node::Int(0))),
+        "string" => Node::Expression(Box::new(Node::String(String::from("")))),
+        "bool" => Node::Expression(Box::new(Node::Bool(false))),
+        "array" => {
             let elements = Vec::new();
             let init_capacity = elements.len();
-            let typename = String::from("Dynamic");
+            let typename = String::from("dynamic");
             let elements_mutable = mutable;
             Node::Expression(Box::new(new_array(
                 typename,
@@ -461,7 +460,7 @@ fn parse_implicit_decl(
     consume_normal_expr_delimiter(tokens, index);
 
     Ok(Node::DeclStmt {
-        target_type: String::from("Dynamic"),
+        target_type: String::from("dynamic"),
         id: id.clone(),
         expression: Box::new(value),
         mutable,
@@ -480,7 +479,7 @@ fn parse_function_decl_stmnt(
             id: id.clone(),
             body: Box::new(body),
             params: Vec::new(),
-            return_type: String::from("Dynamic"),
+            return_type: String::from("dynamic"),
             mutable,
         };
         return Some(Ok(node));
@@ -501,7 +500,7 @@ fn parse_function_decl_stmnt(
                 id: id.clone(),
                 body: Box::new(body),
                 params,
-                return_type: String::from("Dynamic"),
+                return_type: String::from("dynamic"),
                 mutable,
             };
             return Some(Ok(node));
@@ -1041,7 +1040,7 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Node {
         TokenKind::String => Node::String(identifier.value.clone()),
         TokenKind::OpenBracket => {
             let init = parse_array_initializer(tokens, index);
-            new_array("Dynamic".to_string(), init.len(), init.clone(), true, false)
+            new_array("dynamic".to_string(), init.len(), init.clone(), true, false)
         },
         TokenKind::OpenParenthesis => {
             let node = parse_expression(tokens, index);
