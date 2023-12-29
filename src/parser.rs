@@ -522,8 +522,8 @@ fn parse_explicit_decl(
     // todo: check for valid type / builtins
     let target_type_tkn = get_current(tokens, index);
     let target_type = target_type_tkn.value.clone();
-
-    if target_type == "Fn" {
+    
+    if target_type == "fn" {
         *index += 1;
         let params = parse_parameters(tokens, index);
 
