@@ -859,6 +859,15 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Node {
                     rhs: Box::new(right),
                 };
             }
+            TokenKind::Dot => {
+                *index += 1;
+                let right = parse_accessor(tokens, index);
+                left = Node::BinaryOperation {
+                    lhs: Box::new(left),
+                    op: TokenKind::Dot,
+                    rhs: Box::new(right),
+                };
+            }
             TokenKind::CloseParenthesis
             | TokenKind::CloseBracket
             | TokenKind::OpenCurlyBrace
