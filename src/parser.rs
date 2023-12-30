@@ -114,11 +114,11 @@ pub fn parse_fn_decl(
     let kind = token.kind;
     if kind == TokenKind::OpenCurlyBrace {
         let body = parse_block(tokens, index);
-
+        
         let Ok(body) = body else {
             panic!("Expected function body");
         };
-
+        
         let node = Node::FnDeclStmnt {
             id: id.clone(),
             body: Box::new(body),
@@ -133,10 +133,9 @@ pub fn parse_fn_decl(
 pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Result<Node, PrsErr> {
     let default_value_expression = match target_type.as_str() {
         DOUBLE_TNAME => Node::Expression(Box::new(Node::Double(0.0))),
-        _INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
         STRING_TNAME => Node::Expression(Box::new(Node::String(String::from("")))),
         BOOL_TNAME => Node::Expression(Box::new(Node::Bool(false))),
-        _ARRAY_TNAME => {
+        ARRAY_TNAME => {
             let elements = Vec::new();
             let init_capacity = elements.len();
             let typename = String::from("dynamic");
@@ -144,6 +143,7 @@ pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Res
             let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
             Node::Expression(Box::new(arr))
         }
+        INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
         _ => Node::Expression(Box::new(Node::Undefined())),
     };
     Ok(default_value_expression)
