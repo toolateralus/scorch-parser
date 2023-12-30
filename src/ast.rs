@@ -15,9 +15,7 @@ pub trait Visitor<T> {
     fn visit_factor(&mut self, node: &Node) -> T;
     fn visit_eof(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
-    fn visit_lambda(&mut self, node: &Node) -> T;
     fn visit_function_decl(&mut self, node: &Node) -> T;
-    fn visit_param_decl(&mut self, node: &Node) -> T;
     fn visit_function_call(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
     fn visit_repeat_stmnt(&mut self, node: &Node) -> T;
