@@ -1,13 +1,13 @@
 use super::lexer::TokenKind;
 
-pub const ARRAY_TNAME : &str = "array";
-pub const INT_TNAME : &str = "int";
-pub const DOUBLE_TNAME : &str = "double";
-pub const BOOL_TNAME : &str = "bool";
-pub const STRING_TNAME : &str = "string";
-pub const NONE_TNAME : &str = "none";
-pub const DYNAMIC_TNAME : &str = "dynamic";
-pub const FN_TNAME : &str = "fn";
+pub const ARRAY_TNAME: &str = "array";
+pub const INT_TNAME: &str = "int";
+pub const DOUBLE_TNAME: &str = "double";
+pub const BOOL_TNAME: &str = "bool";
+pub const STRING_TNAME: &str = "string";
+pub const NONE_TNAME: &str = "none";
+pub const DYNAMIC_TNAME: &str = "dynamic";
+pub const FN_TNAME: &str = "fn";
 
 pub trait Visitor<T> {
     fn visit_number(&mut self, node: &Node) -> T;
@@ -15,9 +15,7 @@ pub trait Visitor<T> {
     fn visit_factor(&mut self, node: &Node) -> T;
     fn visit_eof(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
-    fn visit_lambda(&mut self, node: &Node) -> T;
     fn visit_function_decl(&mut self, node: &Node) -> T;
-    fn visit_param_decl(&mut self, node: &Node) -> T;
     fn visit_function_call(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
     fn visit_repeat_stmnt(&mut self, node: &Node) -> T;
@@ -48,10 +46,12 @@ pub enum Node {
     Block(Vec<Box<Node>>),
 
     // literal & values
+    Int(i32),
+    Bool(bool),
     Undefined(),
+    Double(f64),
     String(String),
     Identifier(String),
-    Bool(bool),
 
     // Expressions
     LogicalExpression {
@@ -75,6 +75,7 @@ pub enum Node {
     // weaving it in with factors.
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
+    BreakStmnt(Option<Box<Node>>),
 
     Expression(Box<Node>),
     // Statements
@@ -121,7 +122,7 @@ pub enum Node {
         varname: Box<Node>,
         typename: Box<Node>,
     },
-    BreakStmnt(Option<Box<Node>>),
+
     Array {
         typename: String,
         elements: Vec<Box<Node>>,
@@ -135,12 +136,7 @@ pub enum Node {
         expression: Option<Box<Node>>,
         assignment: bool,
     },
-    Int(i32),
-    Double(f64),
-    Lambda {
-        params: Vec<Node>,
-        block: Box<Node>,
-    },
+
     StructDecl {
         id: String,
         block: Box<Node>,
@@ -149,40 +145,49 @@ pub enum Node {
         id: String,
         args: Vec<Node>,
     },
-    TypeAssocBlock { typename: String, block: Box<Node> },
+    TypeAssocBlock {
+        typename: String,
+        block: Box<Node>,
+    },
 }
 impl Node {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
+            Node::TypeAssocBlock { .. } => visitor.visit_type_assoc_block(self),
+            Node::Array { .. } => visitor.visit_array(self),
+            Node::FunctionCall { .. } => visitor.visit_function_call(self),
+            Node::StructInit { .. } => visitor.visit_struct_init(self),
+            Node::ArrayAccessExpr { .. } => visitor.visit_array_access(self),
+
             Node::Undefined() => visitor.visit_eof(self),
             Node::Identifier(..) => visitor.visit_identifier(self),
-            Node::AssignStmnt { .. } => visitor.visit_assignment(self),
-            Node::DeclStmt { .. } => visitor.visit_declaration(self),
-            Node::Block(..) => visitor.visit_block(self),
-            Node::Expression(..) => visitor.visit_expression(self),
             Node::String(..) => visitor.visit_string(self),
-            Node::NegOp(..) => visitor.visit_neg_op(self),
-            Node::NotOp(..) => visitor.visit_not_op(self),
             Node::Bool(..) => visitor.visit_bool(self),
-            Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
-            Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
-            Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
-            Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
-            Node::FnDeclStmnt { .. } => visitor.visit_function_decl(self),
-            Node::ParamDeclNode { .. } => visitor.visit_param_decl(self),
-            Node::FunctionCall { .. } => visitor.visit_function_call(self),
-            Node::Program(..) => visitor.visit_program(self),
-            Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
-            Node::BreakStmnt(..) => visitor.visit_break_stmnt(self),
-            Node::Array { .. } => visitor.visit_array(self),
             Node::Int(..) => visitor.visit_number(self),
             Node::Double(..) => visitor.visit_number(self),
-            Node::Lambda { .. } => visitor.visit_lambda(self),
+            Node::ParamDeclNode { varname: _, typename: _ } => {
+                panic!("this is not implemented")
+            }
+            Node::Program(..) => visitor.visit_program(self),
+            Node::Block(..) => visitor.visit_block(self),
+            Node::Expression(..) => visitor.visit_expression(self),
+
+            Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
-            Node::StructInit { id: _, args: _ } => visitor.visit_struct_init(self),
+            Node::FnDeclStmnt { .. } => visitor.visit_function_decl(self),
+
+            Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
+            Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
+            Node::BreakStmnt(..) => visitor.visit_break_stmnt(self),
+            Node::AssignStmnt { .. } => visitor.visit_assignment(self),
+            Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
+
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
-            Node::ArrayAccessExpr { .. } => visitor.visit_array_access(self),
-            Node::TypeAssocBlock { typename, block } => visitor.visit_type_assoc_block(self),
+            Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
+            Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
+
+            Node::NegOp(..) => visitor.visit_neg_op(self),
+            Node::NotOp(..) => visitor.visit_not_op(self),
         }
     }
 }
