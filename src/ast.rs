@@ -46,13 +46,15 @@ pub trait Visitor<T> {
 pub enum Node {
     Program(Vec<Box<Node>>),
     Block(Vec<Box<Node>>),
-
+    
     // literal & values
+    Int(i32),
+    Bool(bool),
     Undefined(),
+    Double(f64),
     String(String),
     Identifier(String),
-    Bool(bool),
-
+    
     // Expressions
     LogicalExpression {
         lhs: Box<Node>,
@@ -75,7 +77,8 @@ pub enum Node {
     // weaving it in with factors.
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
-
+    BreakStmnt(Option<Box<Node>>),
+ 
     Expression(Box<Node>),
     // Statements
     AssignStmnt {
@@ -121,7 +124,7 @@ pub enum Node {
         varname: Box<Node>,
         typename: Box<Node>,
     },
-    BreakStmnt(Option<Box<Node>>),
+    
     Array {
         typename: String,
         elements: Vec<Box<Node>>,
@@ -135,8 +138,7 @@ pub enum Node {
         expression: Option<Box<Node>>,
         assignment: bool,
     },
-    Int(i32),
-    Double(f64),
+
     StructDecl {
         id: String,
         block: Box<Node>,
