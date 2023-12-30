@@ -16,8 +16,8 @@ pub enum ErrType {
 pub struct PrsErr {
     pub message: String,
     pub token: Token,
-    pub type_ : ErrType,
-    pub index : usize,
+    pub type_: ErrType,
+    pub index: usize,
 }
 
 // function helpers
@@ -28,7 +28,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
 
     loop {
         let mut token = get_current(tokens, index);
-        
+
         if token.kind == TokenKind::CloseParenthesis {
             *index += 1;
             break;
@@ -41,9 +41,9 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         }
 
         let varname = parse_operand(tokens, index)?;
-        
+
         token = get_current(tokens, index);
-        
+
         //parsing colon
         // varname^: Typename
         match token.kind {
@@ -59,11 +59,11 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
                 panic!("Expected colon token after variable name in parameter declaration got");
             }
         }
-        
+
         // parsing type
         // varname: ^Typename
         let typename = parse_operand(tokens, index)?;
-        
+
         // consume comma if there is one.
         if get_current(tokens, index).kind == TokenKind::Comma {
             *index += 1;
@@ -73,16 +73,16 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
             varname: Box::new(varname),
             typename: Box::new(typename),
         };
-        
+
         params.push(param_decl_node);
     }
     Ok(params)
 }
 pub fn parse_arguments(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
     *index += 1; // discard open_paren
-    
+
     let mut args = Vec::new();
-    
+
     loop {
         let token = get_current(tokens, index);
         // paramless.
@@ -114,11 +114,11 @@ pub fn parse_fn_decl(
     let kind = token.kind;
     if kind == TokenKind::OpenCurlyBrace {
         let body = parse_block(tokens, index);
-        
+
         let Ok(body) = body else {
             panic!("Expected function body");
         };
-        
+
         let node = Node::FnDeclStmnt {
             id: id.clone(),
             body: Box::new(body),
@@ -133,41 +133,37 @@ pub fn parse_fn_decl(
 pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Result<Node, PrsErr> {
     let default_value_expression = match target_type.as_str() {
         DOUBLE_TNAME => Node::Expression(Box::new(Node::Double(0.0))),
-        INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
+        _INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
         STRING_TNAME => Node::Expression(Box::new(Node::String(String::from("")))),
         BOOL_TNAME => Node::Expression(Box::new(Node::Bool(false))),
-        ARRAY_TNAME => {
+        _ARRAY_TNAME => {
             let elements = Vec::new();
             let init_capacity = elements.len();
             let typename = String::from("dynamic");
             let elements_mutable = mutable;
-            let arr = new_array(
-                typename,
-                init_capacity,
-                elements,
-                mutable,
-                elements_mutable,
-            );
+            let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
             Node::Expression(Box::new(arr))
         }
         _ => Node::Expression(Box::new(Node::Undefined())),
     };
     Ok(default_value_expression)
 }
-fn parse_fn_call(index: &mut usize, tokens: &Vec<Token>, token: &String) -> Option<Result<Node, PrsErr>> {
+fn parse_fn_call(
+    index: &mut usize,
+    tokens: &Vec<Token>,
+    token: &String,
+) -> Option<Result<Node, PrsErr>> {
     let arguments = parse_arguments(tokens, index);
-    
+
     let Ok(arguments) = arguments else {
-        return Some(Err(
-            PrsErr {
-                message: String::from("Expected arguments"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index : *index,
-            }
-        ));
+        return Some(Err(PrsErr {
+            message: String::from("Expected arguments"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        }));
     };
-    
+
     let node = Node::FunctionCall {
         id: token.clone(),
         arguments: Some(arguments),
@@ -183,7 +179,7 @@ pub fn new_array(
     mutable: bool,
     elements_mutable: bool,
 ) -> Node {
-   Node::Array {
+    Node::Array {
         typename,
         init_capacity,
         elements,
@@ -192,7 +188,10 @@ pub fn new_array(
     }
 }
 
-pub fn parse_array_initializer(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Box<Node>>, PrsErr> {
+pub fn parse_array_initializer(
+    tokens: &Vec<Token>,
+    index: &mut usize,
+) -> Result<Vec<Box<Node>>, PrsErr> {
     let mut args = Vec::new();
     loop {
         let token = get_current(tokens, index);
@@ -219,27 +218,31 @@ pub fn parse_array_initializer(tokens: &Vec<Token>, index: &mut usize) -> Result
     }
     Ok(args)
 }
-pub fn parse_array_access(index: &mut usize, tokens: &Vec<Token>, id: &str) -> Result<Node, PrsErr> {
+pub fn parse_array_access(
+    index: &mut usize,
+    tokens: &Vec<Token>,
+    id: &str,
+) -> Result<Node, PrsErr> {
     let accessor = parse_expression(tokens, index);
-    
+
     let Ok(accessor) = accessor else {
-        return Err(
-            PrsErr {
-                message: String::from("invalid expression in array subscript accessor, ie [...this expression..]"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index : *index,
-            }   
-        );
+        return Err(PrsErr {
+            message: String::from(
+                "invalid expression in array subscript accessor, ie [...this expression..]",
+            ),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        });
     };
-    
+
     let mut token = consume_newlines(index, tokens);
-    
+
     if token.kind == TokenKind::CloseBracket {
         *index += 1; // move past ]
         token = get_current(tokens, index);
     }
-    
+
     let mut node = Node::ArrayAccessExpr {
         id: id.to_string(),
         index_expr: Box::new(accessor),
@@ -261,9 +264,8 @@ pub fn parse_array_access(index: &mut usize, tokens: &Vec<Token>, id: &str) -> R
                 assignment: _,
             } = node
             {
-                
                 let expression = parse_expression(tokens, index);
-                
+
                 let Ok(expression) = expression else {
                     return Err(PrsErr {
                         message: String::from("invalid expression in array subscript accessor, ie [...this expression..]"),
@@ -272,7 +274,7 @@ pub fn parse_array_access(index: &mut usize, tokens: &Vec<Token>, id: &str) -> R
                         index : *index,
                     });
                 };
-                
+
                 node = Node::ArrayAccessExpr {
                     id,
                     index_expr,
@@ -286,7 +288,7 @@ pub fn parse_array_access(index: &mut usize, tokens: &Vec<Token>, id: &str) -> R
             message: String::from("Expected assignment operator"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
-            index : *index,
+            index: *index,
         }),
     }
 }
@@ -326,7 +328,11 @@ pub fn consume_normal_expr_delimiter(tokens: &Vec<Token>, index: &mut usize) {
 }
 
 // keywords
-fn parse_repeat_stmnt(next: &Token, index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+fn parse_repeat_stmnt(
+    next: &Token,
+    index: &mut usize,
+    tokens: &Vec<Token>,
+) -> Result<Node, PrsErr> {
     // style::
     // repeat i < 200 {...}
     if next.family == TokenFamily::Identifier {
@@ -346,9 +352,9 @@ fn parse_repeat_stmnt(next: &Token, index: &mut usize, tokens: &Vec<Token>) -> R
                  // style::
                  // repeat {... }
     let block = parse_block(tokens, index)?;
-    
+
     //*index += 1;
-    
+
     Ok(Node::RepeatStmnt {
         iterator_id: Option::None,
         condition: Option::None,
@@ -374,16 +380,16 @@ fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
     // if, no else.
     if else_or_end.kind == TokenKind::Else {
         let else_node = parse_else(tokens, index);
-        
+
         let Ok(else_node) = else_node else {
             return Err(PrsErr {
                 message: String::from("Expected else statement"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
-                index : *index,
+                index: *index,
             });
         };
-        
+
         return Ok(Node::IfStmnt {
             condition: Box::new(if_condition),
             block: Box::new(if_block),
@@ -438,7 +444,7 @@ fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
         }
 
         let else_block = parse_block(tokens, index)?;
-        
+
         if get_current(tokens, index).kind == TokenKind::Else {
             let nested_else = parse_else(tokens, index)?;
             return Ok(Node::ElseStmnt {
@@ -500,7 +506,7 @@ fn parse_decl(
                     message: String::from("Expected function call"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
-                    index : *index,
+                    index: *index,
                 });
             };
             node
@@ -520,20 +526,20 @@ fn parse_implicit_decl(
     mutable: bool,
 ) -> Result<Node, PrsErr> {
     *index += 1;
-    
+
     if let Some(Ok(value)) = parse_function_decl_stmnt(tokens, index, id, mutable) {
         return Ok(value);
     }
-    
+
     if get_current(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
     }
-    
+
     // implicit variable declaration
     let value = parse_expression(tokens, index)?;
-    
+
     consume_normal_expr_delimiter(tokens, index);
-    
+
     Ok(Node::DeclStmt {
         target_type: String::from("dynamic"),
         id: id.clone(),
@@ -549,11 +555,11 @@ fn parse_function_decl_stmnt(
 ) -> Option<Result<Node, PrsErr>> {
     if get_current(tokens, index).kind == TokenKind::OpenCurlyBrace {
         let bdy = parse_block(tokens, index);
-        
+
         let Ok(body) = bdy else {
             return Some(bdy);
         };
-        
+
         //dbg!(&body);
         let node = Node::FnDeclStmnt {
             id: id.clone(),
@@ -568,27 +574,27 @@ fn parse_function_decl_stmnt(
         let mut temp_index = *index + 2;
         if get_current(tokens, &mut temp_index).kind == TokenKind::Colon {
             let params = parse_parameters(tokens, index);
-            
+
             let Ok(params) = params else {
                 return Some(Err(PrsErr {
                     message: String::from("Expected function parameters"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
-                    index : *index,
+                    index: *index,
                 }));
             };
-            
+
             let body = parse_block(tokens, index);
-            
+
             let Ok(body) = body else {
                 return Some(Err(PrsErr {
                     message: String::from("Expected function body"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
-                    index : *index,
-                }));  
+                    index: *index,
+                }));
             };
-            
+
             let node = Node::FnDeclStmnt {
                 id: id.clone(),
                 body: Box::new(body),
@@ -597,12 +603,12 @@ fn parse_function_decl_stmnt(
                 mutable,
             };
             return Some(Ok(node));
-        }  else {
-            return Some(Err(PrsErr{
+        } else {
+            return Some(Err(PrsErr {
                 message: String::from("Expected colon token after function parameters"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
-                index : *index,
+                index: *index,
             }));
         }
     } else {
@@ -627,7 +633,7 @@ fn parse_explicit_decl(
     if target_type == "fn" {
         *index += 1;
         let params = parse_parameters(tokens, index)?;
-        
+
         if get_current(tokens, index).kind == TokenKind::Arrow {
             *index += 1;
 
@@ -741,11 +747,11 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
             break;
         }
         let statement = parse_statement(tokens, &mut index);
-        
+
         let Some(statement) = statement else {
             break; // end of input, undetected before this call.
         };
-        
+
         match statement {
             Ok(node) => statements.push(Box::new(node)),
             Err(_) => {
@@ -787,24 +793,24 @@ fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
 }
 fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node, PrsErr>> {
     if *index >= tokens.len() {
-        return Some(Err(PrsErr{
+        return Some(Err(PrsErr {
             message: String::from("Unexpected end of tokens"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedEof,
-            index : *index,
+            index: *index,
         }));
     }
-    
+
     let first = consume_newlines(index, tokens);
-    
+
     if *index + 1 >= tokens.len() {
         return None;
         // newline, eof.
         // this is old but should never get called, if it does we have some work to do on it.
     }
-    
+
     let second = tokens.get(*index + 1).unwrap();
-    
+
     match first.family {
         TokenFamily::Keyword => Some(parse_keyword_ops(first, index, second, tokens)),
         TokenFamily::Identifier => match second.kind {
@@ -820,7 +826,11 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
     }
 }
 
-fn parse_type_assoc_block(typename: &Token, index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+fn parse_type_assoc_block(
+    typename: &Token,
+    index: &mut usize,
+    tokens: &Vec<Token>,
+) -> Result<Node, PrsErr> {
     *index += 1; // move past Typename
     consume_next_if_type(tokens, index, TokenKind::DubColon);
     consume_next_if_type(tokens, index, TokenKind::OpenCurlyBrace);
@@ -1003,7 +1013,7 @@ fn parse_const(
 }
 fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_logical(tokens, index)?;
-    
+
     while let Some(token) = tokens.get(*index) {
         match token.kind {
             TokenKind::LogicalAnd | TokenKind::LogicalOr => {
@@ -1103,7 +1113,7 @@ fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> 
 }
 fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_unary(tokens, index)?;
-    
+
     while let Some(token) = tokens.get(*index) {
         match token.kind {
             TokenKind::Multiply | TokenKind::Divide => {
@@ -1118,7 +1128,7 @@ fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
             _ => break,
         }
     }
-    
+
     Ok(left)
 }
 fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
@@ -1133,12 +1143,12 @@ fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
             } else {
                 Node::NotOp
             };
-            
+
             assert!(
                 !(matches!(node, Node::NegOp(_)) || matches!(node, Node::NotOp(_))),
                 "Double not operations are not allowed"
             );
-            
+
             Ok(node_type(Box::new(node)))
         }
         _ => parse_dot(tokens, index),
@@ -1157,25 +1167,23 @@ fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
                 rhs: Box::new(rhs),
             })
         }
-        _ => {
-            Ok(left)
-        }
+        _ => Ok(left),
     }
 }
 fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_operand(tokens, index)?;
     let op = get_current(tokens, index);
-    
+
     match op.kind {
         TokenKind::OpenParenthesis => {
             if let Node::Identifier(id) = &left {
                 parse_fn_call(index, tokens, &id).expect("Expected function call node, got")
             } else {
-                Err(PrsErr{
+                Err(PrsErr {
                     message: String::from("Expected identifier"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
-                    index : *index,
+                    index: *index,
                 })
             }
         }
@@ -1184,11 +1192,11 @@ fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
                 *index += 1; // move past [
                 Ok(parse_array_access(index, tokens, &id)?)
             } else {
-                Err(PrsErr{
+                Err(PrsErr {
                     message: String::from("Expected identifier"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
-                    index : *index,
+                    index: *index,
                 })
             }
         }
@@ -1203,11 +1211,9 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
 
     match identifier.kind {
         // todo: make these all safer.
-        TokenKind::Number => {
-            parse_digits(identifier)
-        }
+        TokenKind::Number => parse_digits(identifier),
         TokenKind::Bool => Ok(Node::Bool(identifier.value.parse::<bool>().unwrap())),
-        
+
         TokenKind::Identifier => Ok(Node::Identifier(identifier.value.clone())),
         TokenKind::New => {
             let token = get_current(tokens, index);
@@ -1233,7 +1239,13 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
         TokenKind::String => Ok(Node::String(identifier.value.clone())),
         TokenKind::OpenBracket => {
             let init = parse_array_initializer(tokens, index)?;
-            Ok(new_array("dynamic".to_string(), init.len(), init.clone(), true, false))
+            Ok(new_array(
+                "dynamic".to_string(),
+                init.len(),
+                init.clone(),
+                true,
+                false,
+            ))
         }
         TokenKind::OpenParenthesis => {
             let node = parse_expression(tokens, index)?;
@@ -1245,13 +1257,13 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
             *index += 1;
             Ok(node)
         }
-        
+
         TokenKind::Repeat => parse_repeat_stmnt(get_current(tokens, index), index, tokens),
-        _ => Err(PrsErr{
+        _ => Err(PrsErr {
             message: String::from("Unexpected token"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
-            index : *index,
+            index: *index,
         }),
     }
 }
@@ -1259,11 +1271,16 @@ fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
 fn parse_digits(identifier: &Token) -> Result<Node, PrsErr> {
     let int = identifier.value.parse::<i32>();
     let float = identifier.value.parse::<f64>();
-            
-    Ok(int.map(Node::Int)
+
+    Ok(int
+        .map(Node::Int)
         .unwrap_or_else(|_| float.map(Node::Double).unwrap()))
 }
-fn parse_struct_init(tokens: &Vec<Token>, index: &mut usize, identifier: &Token) -> Result<Node, PrsErr> {
+fn parse_struct_init(
+    tokens: &Vec<Token>,
+    index: &mut usize,
+    identifier: &Token,
+) -> Result<Node, PrsErr> {
     let mut args = Vec::new();
 
     loop {
@@ -1286,7 +1303,7 @@ fn parse_struct_init(tokens: &Vec<Token>, index: &mut usize, identifier: &Token)
             }
         }
     }
-    
+
     return Ok(Node::StructInit {
         id: identifier.value.clone(),
         args,
