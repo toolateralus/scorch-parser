@@ -37,7 +37,12 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         // parsing varname
         // ^varname: Typename
         if token.family != TokenFamily::Identifier {
-            panic!("Expected variable name in parameter declaration");
+            Err(PrsErr{
+                message: String::from("Expected identifier"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            })?;
         }
 
         let varname = parse_operand(tokens, index)?;
@@ -48,15 +53,24 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         // varname^: Typename
         match token.kind {
             TokenKind::ColonEquals => {
-                panic!("implicit default value & parameter type not yet implement")
+                return Err(PrsErr{
+                    message: String::from("implicit typed / default value parameters are not yet implemented. coming soon B)"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             }
             TokenKind::Colon => {
                 // got our valid case.
                 *index += 1;
             }
             _ => {
-                dbg!(token);
-                panic!("Expected colon token after variable name in parameter declaration got");
+                return Err(PrsErr{
+                    message: String::from("Expected colon token after variable name in parameter declaration"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             }
         }
 
@@ -116,7 +130,12 @@ pub fn parse_fn_decl(
         let body = parse_block(tokens, index);
 
         let Ok(body) = body else {
-            panic!("Expected function body");
+            return Some(Err(PrsErr {
+                message: String::from("Expected function body"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            }));
         };
 
         let node = Node::FnDeclStmnt {
@@ -297,7 +316,7 @@ pub fn get_current<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> &'a Token {
     if let Some(token) = tokens.get(*index) {
         return token;
     } else {
-        panic!("Unexpected end of tokens")
+        panic!("Unexpected end of tokens");
     }
 }
 pub fn consume_newlines<'a>(index: &mut usize, tokens: &'a Vec<Token>) -> &'a Token {
@@ -366,9 +385,12 @@ fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
     let if_condition = parse_expression(tokens, index)?;
 
     if get_current(tokens, index).kind != TokenKind::OpenCurlyBrace {
-        dbg!(get_current(tokens, index));
-        dbg!(if_condition);
-        panic!("If expected open brace after condition");
+        return Err(PrsErr{
+            message: String::from("Expected open curly brace after if condition"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        });
     }
 
     *index += 1; // skip open brace
@@ -513,9 +535,12 @@ fn parse_decl(
         }
 
         _ => {
-            dbg!(token);
-            println!("failed to parse declaration statement. expected ':', ':=', '=', or '('. \n instead got : \n current : {:?}\n next : {:?}", token, operator);
-            panic!("parser failure : check logs.");
+            return Err(PrsErr{
+                message: String::from("Unexpected token"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            });
         }
     }
 }
@@ -638,15 +663,23 @@ fn parse_explicit_decl(
             *index += 1;
 
             if get_current(tokens, index).kind != TokenKind::Identifier {
-                dbg!(get_current(tokens, index));
-                panic!("Expected type identifier");
+                return Err(PrsErr{
+                    message: String::from("Expected type identifier"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             }
 
             let cur = get_current(tokens, index);
 
             if cur.kind != TokenKind::Identifier {
-                dbg!(get_current(tokens, index));
-                panic!("Expected type identifier");
+                return Err(PrsErr{
+                    message: String::from("Expected type identifier"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             }
 
             let return_type = cur.value.clone();
@@ -661,12 +694,21 @@ fn parse_explicit_decl(
                 return_type.to_string(),
                 mutable,
             ) else {
-                dbg!(get_current(tokens, index));
-                panic!("Expected function body");
+                return Err(PrsErr{
+                    message: String::from("Expected function body"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             };
-
+            
             let Ok(fn_def) = &val else {
-                panic!("Expected function body");
+                return Err(PrsErr{
+                    message: String::from("Expected function body"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             };
 
             *index += 1;
@@ -718,18 +760,7 @@ pub fn generate_random_function_name() -> String {
         .collect();
     name
 }
-fn parse_params(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
-    let mut params = Vec::new();
-    while get_current(tokens, index).kind != TokenKind::Pipe {
-        params.push(parse_expression(tokens, index)?);
 
-        if get_current(tokens, index).kind == TokenKind::Comma {
-            *index += 1;
-        }
-    }
-    *index += 1; // Skip over the closing Pipe token
-    Ok(params)
-}
 fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
     let current = get_current(tokens, index);
     if current.kind != expected {
@@ -758,7 +789,12 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
                 if token.kind == TokenKind::Newline || token.kind == TokenKind::Eof {
                     break; // ignore newlines.
                 }
-                panic!("Expected statement node");
+                return Err(PrsErr{
+                    message: String::from("Expected statement node"),
+                    token: get_current(tokens, &mut index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index,
+                });
             }
         }
     }
@@ -783,9 +819,12 @@ fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
                 if token.kind == TokenKind::Newline || token.kind == TokenKind::Eof {
                     break; // ignore newlines.
                 }
-                println!("Block encountered unexpected token:");
-                dbg!(&token);
-                panic!("Expected statement node");
+                return Err(PrsErr{
+                    message: String::from("Expected statement node"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                });
             }
         }
     }
@@ -822,7 +861,14 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
             _ => Some(parse_expression(tokens, index)),
         },
         TokenFamily::Operator | TokenFamily::Value => Some(parse_expression(tokens, index)),
-        _ => panic!("Expected keyword, identifier or operator token"),
+        _ => {
+            Some(Err(PrsErr{
+                message: String::from("Expected statement node"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            }))
+        }
     }
 }
 
@@ -854,13 +900,21 @@ fn parse_keyword_ops(
         TokenKind::Repeat => parse_repeat_stmnt(next_token, index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
         TokenKind::Else => {
-            dbg!(keyword);
-            panic!("else statements must follow an if.");
+            return Err(PrsErr{
+                message: String::from("Unexpected else statement.. else must follow an if."),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            });
         }
         TokenKind::Struct => parse_struct_decl(index, next_token, tokens),
         _ => {
-            dbg!(keyword);
-            panic!("keyword is likely misused or not yet implemented.");
+            return Err(PrsErr{
+                message: String::from("unexpected token"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            })
         }
     }
 }
@@ -875,7 +929,12 @@ fn parse_struct_decl(
     let mut token = get_current(tokens, index);
 
     if token.kind != TokenKind::Pipe {
-        panic!("Expected pipe to open body for type definition");
+        return Err(PrsErr{
+            message: String::from("Expected pipe token after struct identifier"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        });
     }
 
     let mut statements = Vec::new();
@@ -918,7 +977,7 @@ fn parse_type_assoc_decl_block(
                     Node::FnDeclStmnt { .. } => true,
                     _ => false,
                 };
-
+                
                 if !is_valid {
                     panic!("Expected function declaration statement in associated block, got {:?}, \n\n from : {:?}", node, statements);
                 }
@@ -977,8 +1036,12 @@ fn parse_var(
     // consume 'var'
     *index += 1;
     parse_decl(second, index, tokens, true).map_err(|_| {
-        dbg!(first);
-        panic!("Expected declaration statement");
+        PrsErr{
+            message: String::from("Expected declaration statement"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        }
     })
 }
 
@@ -991,7 +1054,12 @@ fn parse_break(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result
             let value = parse_expression(tokens, index)?;
             Ok(Node::BreakStmnt(Some(Box::new(value))))
         }
-        _ => panic!("break statements must be followed by a newline or a return value."),
+        _ => Err(PrsErr{
+            message: String::from("Unexpected token"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+        }),
     }
 }
 fn parse_const(
@@ -1006,8 +1074,12 @@ fn parse_const(
     match parse_decl(varname, index, tokens, false) {
         Ok(node) => Ok(node),
         Err(_) => {
-            dbg!(first);
-            panic!("Expected declaration statement, got {:?}", varname);
+            Err(PrsErr{
+                message: String::from("Expected declaration statement"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            })
         }
     }
 }
@@ -1042,10 +1114,12 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsE
             | TokenKind::Newline
             | TokenKind::Comma
             | TokenKind::Eof => break,
-            _ => panic!(
-                "unexpected token in expression : {}\n\nleft: {:?}",
-                token.value, left
-            ),
+            _ => Err(PrsErr{
+                message: String::from("Unexpected token"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+            })?,
         }
     }
 
