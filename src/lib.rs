@@ -2,13 +2,12 @@ pub mod ast;
 pub mod lexer;
 pub mod parser;
 
-
 #[cfg(test)]
 mod tests {
     use lexer::{create_tokenizer, TokenProcessor};
-    
+
     use super::*;
-    
+
     #[test]
     fn test_main() {
         // todo: make testing much much better in this project.
@@ -320,13 +319,13 @@ assert_eq(100.0, vector3.z, 'Vec3.z failed to equal expected value')
 
 status = true
         ";
-        
-        let mut tokenizer = create_tokenizer();   
-        
+
+        let mut tokenizer = create_tokenizer();
+
         tokenizer.tokenize(input);
-        
+
         let ast_root = parser::parse_program(&tokenizer.tokens);
-        
+
         dbg!(&ast_root);
     }
 }
