@@ -44,7 +44,7 @@ pub trait Visitor<T> {
 pub enum Node {
     Program(Vec<Box<Node>>),
     Block(Vec<Box<Node>>),
-    
+
     // literal & values
     Int(i32),
     Bool(bool),
@@ -52,7 +52,7 @@ pub enum Node {
     Double(f64),
     String(String),
     Identifier(String),
-    
+
     // Expressions
     LogicalExpression {
         lhs: Box<Node>,
@@ -76,7 +76,7 @@ pub enum Node {
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
     BreakStmnt(Option<Box<Node>>),
- 
+
     Expression(Box<Node>),
     // Statements
     AssignStmnt {
@@ -122,7 +122,7 @@ pub enum Node {
         varname: Box<Node>,
         typename: Box<Node>,
     },
-    
+
     Array {
         typename: String,
         elements: Vec<Box<Node>>,
@@ -165,14 +165,15 @@ impl Node {
             Node::Bool(..) => visitor.visit_bool(self),
             Node::Int(..) => visitor.visit_number(self),
             Node::Double(..) => visitor.visit_number(self),
-
+            Node::ParamDeclNode { varname: _, typename: _ } => {
+                panic!("this is not implemented")
+            }
             Node::Program(..) => visitor.visit_program(self),
             Node::Block(..) => visitor.visit_block(self),
             Node::Expression(..) => visitor.visit_expression(self),
 
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
-            Node::ParamDeclNode { .. } => visitor.visit_param_decl(self),
             Node::FnDeclStmnt { .. } => visitor.visit_function_decl(self),
 
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),

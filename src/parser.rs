@@ -114,11 +114,11 @@ pub fn parse_fn_decl(
     let kind = token.kind;
     if kind == TokenKind::OpenCurlyBrace {
         let body = parse_block(tokens, index);
-        
+
         let Ok(body) = body else {
             panic!("Expected function body");
         };
-        
+
         let node = Node::FnDeclStmnt {
             id: id.clone(),
             body: Box::new(body),
