@@ -1,6 +1,5 @@
-use std::fmt::format;
 use rand::Rng;
-use crate::ast::{BOOL_TNAME, DOUBLE_TNAME, STRING_TNAME};
+use crate::ast::{BOOL_TNAME, DOUBLE_TNAME, STRING_TNAME, ARRAY_TNAME, INT_TNAME};
 
 use super::{
     ast::Node,
@@ -8,7 +7,7 @@ use super::{
 };
 #[cfg(debug_assertions)]
 macro_rules! dbgmsg {
-	($msg:expr) => {format!("[{}:{}]: {}", file!(), line!(), $msg)};
+	($msg:expr) => {format!(" [{}:{}] {}", file!(), line!(), $msg)};
 }
 #[cfg(not(debug_assertions))]
 macro_rules! dbgmsg {
@@ -175,7 +174,7 @@ pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Res
             let elements_mutable = mutable;
             let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
             Node::Expression(Box::new(arr))
-        }
+        },
         INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
         _ => Node::Expression(Box::new(Node::Undefined())),
     };
@@ -516,8 +515,6 @@ fn parse_decl(
     // varname : type = default;
     let id = token.value.clone();
     
-    *index += 1;
-
     let operator = get_current(tokens, index);
     
     match operator.kind {
@@ -547,7 +544,7 @@ fn parse_decl(
         TokenKind::OpenParenthesis => {
             let Some(node) = parse_fn_call(index, tokens, &token.value.clone()) else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected function call"),
+                    message: dbgmsg!("decl err: Expected function call"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
@@ -559,7 +556,7 @@ fn parse_decl(
         
         _ => {
             return Err(PrsErr{
-                message: dbgmsg!("Unexpected token"),
+                message: dbgmsg!("decl err: invalid operator"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
@@ -897,7 +894,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
 				Ok(node) => node,
 				Err(inner_err) => {
 					return Some(Err(PrsErr {
-						message: dbgmsg!("statement err: left side could not parse"),
+						message:  dbgmsg!("statement err: left side could not parse"),
 						token: get_current(tokens, index).clone(),
 						type_: ErrType::UnexpectedToken,
 						index: *index,
@@ -911,7 +908,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
 					Some(decl)
 				}
 				TokenKind::Assignment => {
-					*index += 2;
+					*index += 1;
 					let expression = match parse_expression(tokens, index) {
 						Ok(node) => node,
 						Err(inner_err) => {
@@ -1078,23 +1075,22 @@ fn parse_struct_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
-
-        let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
-            *index += 1;
-            consume_newlines(index, tokens);
+		*index += 1;
+		
+		if token.kind == TokenKind::Pipe {
+			break;
+		}
+        
+        let mutable = if token.kind == TokenKind::Var {
+            token = consume_newlines(index, tokens);
             true
         } else {
             false
         };
-
-        if token.kind == TokenKind::Pipe {
-            *index += 1;
-            break;
-        }
-
+        
         match parse_decl(token, index, tokens, mutable) {
             Ok(node) => statements.push(Box::new(node)),
-            Err(inner_err) => panic!("struct del block err: invalid declaration\ninner err:\n{:#?}", inner_err),
+            Err(inner_err) => panic!("struct decl block err: invalid declaration\ninner err:\n{:#?}", inner_err),
         }
 
         token = get_current(tokens, index);
@@ -1193,7 +1189,9 @@ fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsE
             | TokenKind::Pipe
             | TokenKind::Newline
             | TokenKind::Comma
-            | TokenKind::Assignment 
+            | TokenKind::Assignment
+			| TokenKind::ColonEquals
+			| TokenKind::Colon 
             | TokenKind::Eof => break,
             _ => Err(PrsErr{
                 message: dbgmsg!("expression err: unexpected token"),
