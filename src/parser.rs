@@ -1110,7 +1110,7 @@ fn parse_var(
     *index += 1;
     parse_decl(second, index, tokens, true).map_err(|inner_err| {
         PrsErr{
-            message: dbgmsg!("Expected declaration statement"),
+            message: dbgmsg!("var: Expected declaration statement"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
