@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::ast::{BOOL_TNAME, DOUBLE_TNAME, STRING_TNAME};
+use crate::ast::{BOOL_TNAME, DOUBLE_TNAME, STRING_TNAME, ARRAY_TNAME, INT_TNAME};
 
 use super::{
     ast::Node,
@@ -1055,7 +1055,7 @@ fn parse_break(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result
             Ok(Node::BreakStmnt(Some(Box::new(value))))
         }
         _ => Err(PrsErr{
-            message: String::from("Unexpected token"),
+            message: String::from("unexpected token in break statement"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
