@@ -2,11 +2,11 @@ struct X |
     
 |
 
-// X :: {
-//     funcy_test :=  {
-//         break 100
-//     }
-// }
+within X {
+    funcy_test :=  {
+        break 100
+    }
+}
         
 ff_addition 		:= 5.3 + 6.2
 ff_subtraction 		:= 5.3 - 6.2

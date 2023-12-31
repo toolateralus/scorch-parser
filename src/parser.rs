@@ -927,7 +927,6 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
 						expression: Box::new(expression),
 					}))
 				}
-				TokenKind::DubColon => Some(parse_type_assoc_block(first, index, tokens)),
 				_ => Some(Ok(left)),
 			};
 		},
@@ -944,12 +943,12 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
 }
 
 fn parse_type_assoc_block(
-    typename: &Token,
     index: &mut usize,
     tokens: &Vec<Token>,
 ) -> Result<Node, PrsErr> {
-    *index += 1; // move past Typename
-    consume_next_if_type(tokens, index, TokenKind::DubColon);
+    consume_next_if_type(tokens, index, TokenKind::Within);
+	let typename = get_current(tokens, index);
+    consume_next_if_type(tokens, index, TokenKind::Identifier);
     consume_next_if_type(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
     parse_type_assoc_decl_block(index, tokens, &mut statements);
@@ -970,6 +969,7 @@ fn parse_keyword_ops(
         TokenKind::Break => parse_break(index, next_token, tokens),
         TokenKind::Repeat => parse_repeat_stmnt(next_token, index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
+		TokenKind::Within => parse_type_assoc_block(index, tokens),
         TokenKind::Else => {
             return Err(PrsErr{
                 message: dbgmsg!("Unexpected else statement.. else must follow an if."),
@@ -1031,9 +1031,9 @@ fn parse_type_assoc_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
+		*index += 1;
 
         let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
-            *index += 1;
             consume_newlines(index, tokens);
             true
         } else {
@@ -1041,7 +1041,6 @@ fn parse_type_assoc_decl_block(
         };
 
         if token.kind == TokenKind::CloseCurlyBrace {
-            *index += 1;
             break;
         }
 
@@ -1106,8 +1105,8 @@ fn parse_var(
     tokens: &Vec<Token>,
     first: &Token,
 ) -> Result<Node, PrsErr> {
-    // consume 'var'
-    *index += 1;
+    // consume 'var' and identifier
+    *index += 2;
     parse_decl(second, index, tokens, true).map_err(|inner_err| {
         PrsErr{
             message: dbgmsg!("var: Expected declaration statement"),

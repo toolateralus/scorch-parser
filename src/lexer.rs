@@ -33,7 +33,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("%"), TokenKind::Modulo),
         (String::from("!"), TokenKind::Not),
     ]);
-
+    
     let keywords = HashMap::from([
         (String::from("const"), TokenKind::Const),
         (String::from("var"), TokenKind::Var),
@@ -44,6 +44,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("new"), TokenKind::New),
         (String::from("struct"), TokenKind::Struct),
         (String::from("repeat"), TokenKind::Repeat),
+        (String::from("within"), TokenKind::Within),
     ]);
 
     let tokenizer = Tokenizer {
@@ -137,6 +138,7 @@ pub enum TokenKind {
     Break,
     Struct,
     New,
+    Within,
 }
 #[derive(Debug, Clone)]
 pub struct Token {

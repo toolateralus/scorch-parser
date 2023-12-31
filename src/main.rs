@@ -7,7 +7,7 @@ pub mod lexer;
 pub mod parser;
 
 fn main() {
-    let mut file = File::open("dot_struct_test.scorch").expect("Failed to open file");
+    let mut file = File::open("src/tests.scorch").expect("Failed to open file");
     let mut input = String::new();
     file.read_to_string(&mut input)
         .expect("Failed to read file");  
