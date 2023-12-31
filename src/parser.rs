@@ -493,11 +493,11 @@ fn parse_decl(
 ) -> Result<Node, PrsErr> {
     // varname : type = default;
     let id = token.value.clone();
-
+    
     *index += 1;
 
     let operator = get_current(tokens, index);
-
+    
     match operator.kind {
         // varname := default;
         // declaring a variable with implicit type.
@@ -533,7 +533,7 @@ fn parse_decl(
             };
             node
         }
-
+        
         _ => {
             return Err(PrsErr{
                 message: String::from("Unexpected token"),
@@ -839,7 +839,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
             index: *index,
         }));
     }
-
+    
     let first = consume_newlines(index, tokens);
 
     if *index + 1 >= tokens.len() {
@@ -847,9 +847,9 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
         // newline, eof.
         // this is old but should never get called, if it does we have some work to do on it.
     }
-
+    
     let second = tokens.get(*index + 1).unwrap();
-
+    
     match first.family {
         TokenFamily::Keyword => Some(parse_keyword_ops(first, index, second, tokens)),
         TokenFamily::Identifier => match second.kind {
