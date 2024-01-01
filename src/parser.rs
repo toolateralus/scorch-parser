@@ -572,11 +572,7 @@ fn parse_implicit_decl(
     mutable: bool,
 ) -> Result<Node, PrsErr> {
     *index += 1;
-
-    if let Some(Ok(value)) = parse_function_decl_stmnt(tokens, index, id, mutable) {
-        return Ok(value);
-    }
-
+    
     if get_current(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
     }
@@ -585,7 +581,7 @@ fn parse_implicit_decl(
     let value = parse_expression(tokens, index)?;
 
     consume_normal_expr_delimiter(tokens, index);
-
+    
     Ok(Node::DeclStmt {
         target_type: String::from("dynamic"),
         id: id.clone(),
@@ -593,79 +589,7 @@ fn parse_implicit_decl(
         mutable,
     })
 }
-fn parse_function_decl_stmnt(
-    tokens: &Vec<Token>,
-    index: &mut usize,
-    id: &String,
-    mutable: bool,
-) -> Option<Result<Node, PrsErr>> {
-    if get_current(tokens, index).kind == TokenKind::OpenCurlyBrace {
-        let bdy = parse_block(tokens, index);
 
-        let Ok(body) = bdy else {
-            return Some(bdy);
-        };
-
-        //dbg!(&body);
-        let node = Node::FnDeclStmnt {
-            id: id.clone(),
-            body: Box::new(body),
-            params: Vec::new(),
-            return_type: String::from("dynamic"),
-            mutable,
-        };
-        return Some(Ok(node));
-    }
-    if get_current(tokens, index).kind == TokenKind::OpenParenthesis {
-        let mut temp_index = *index + 2;
-        if get_current(tokens, &mut temp_index).kind == TokenKind::Colon {
-            let params = match parse_parameters(tokens, index) {
-				Ok(params) => params,
-				Err(inner_err) => {
-					return Some(Err(PrsErr {
-						message: dbgmsg!("function_decl_stmnt err: Expected function parameters"),
-						token: get_current(tokens, index).clone(),
-						type_: ErrType::UnexpectedToken,
-						index: *index,
-						inner_err: Some(Box::new(inner_err))
-					})); 
-				}
-			};
-
-            let body = match parse_block(tokens, index) {
-				Ok(body) => body,
-				Err(inner_err) => {
-					return Some(Err(PrsErr {
-						message: dbgmsg!("function_decl_stmnt err: Expected function body"),
-						token: get_current(tokens, index).clone(),
-						type_: ErrType::UnexpectedToken,
-						index: *index,
-						inner_err: Some(Box::new(inner_err))
-					}));
-				}
-			};
-
-            let node = Node::FnDeclStmnt {
-                id: id.clone(),
-                body: Box::new(body),
-                params,
-                return_type: String::from("dynamic"),
-                mutable,
-            };
-            return Some(Ok(node));
-        } else {
-            return Some(Err(PrsErr {
-                message: dbgmsg!("Expected colon token after function parameters"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-				inner_err: None
-            }));
-        }
-    } else {
-        return None;
-    }
-}
 fn parse_explicit_decl(
     index: &mut usize,
     tokens: &Vec<Token>,
@@ -680,80 +604,51 @@ fn parse_explicit_decl(
     // todo: check for valid type / builtins
     let target_type_tkn = get_current(tokens, index);
     let target_type = target_type_tkn.value.clone();
-
-    if target_type == "fn" {
-        *index += 1;
-        let params = parse_parameters(tokens, index)?;
-
-        if get_current(tokens, index).kind == TokenKind::Arrow {
-            *index += 1;
-
-            if get_current(tokens, index).kind != TokenKind::Identifier {
-                return Err(PrsErr{
-                    message: dbgmsg!("Expected type identifier"),
-                    token: get_current(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-					inner_err: None
-                });
-            }
-
-            let cur = get_current(tokens, index);
-
-            if cur.kind != TokenKind::Identifier {
-                return Err(PrsErr{
-                    message: dbgmsg!("Expected type identifier"),
-                    token: get_current(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-					inner_err: None
-                });
-            }
-
-            let return_type = cur.value.clone();
-
-            *index += 1;
-
-            let Some(val) = parse_fn_decl(
-                &params,
-                tokens,
-                index,
-                &id,
-                return_type.to_string(),
-                mutable,
-            ) else {
-                return Err(PrsErr{
-                    message: dbgmsg!("Expected function body"),
-                    token: get_current(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-					inner_err: None
-                });
-            };
-            
-            let fn_def = match &val {
-				Ok(fn_def) => fn_def,
-                Err(inner_err) => {
-					return Err(PrsErr{
-						message: dbgmsg!("explicit decl err: Expected function body (INNER EXCEPTION HIDDEN DUE TO OWNERSHIP ISSUES)"),
-						token: get_current(tokens, index).clone(),
-						type_: ErrType::UnexpectedToken,
-						index: *index,
-						inner_err: None
-					});
-				}
-            };
-            
-            *index += 1;
-
-            return Ok(fn_def.clone());
-        }
-    }
-
+    
     *index += 1;
-
+    
+    let token = get_current(tokens, index);
+    if token.kind == TokenKind::OpenParenthesis {
+        let return_type = target_type;
+        let params = parse_parameters(tokens, index)?; //(x : int..)..
+        let Some(val) = parse_fn_decl(
+            &params,
+            tokens,
+            index,
+            &id,
+            return_type.to_string(),
+            mutable,
+        ) else {
+            return Err(PrsErr{
+                message: dbgmsg!("Expected function body"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+                inner_err: None
+            });
+        };
+        
+        let fn_def = match &val {
+            Ok(fn_def) => fn_def,
+            Err(inner_err) => {
+                return Err(PrsErr{
+                    message: dbgmsg!("explicit decl err: Expected function body (INNER EXCEPTION HIDDEN DUE TO OWNERSHIP ISSUES)"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            }
+        };
+            
+        // consume body end?        
+        *index += 1;
+            
+        return Ok(fn_def.clone());
+    }
+    
     // varname : type^ = default;
-
+    
     let token = get_current(tokens, index);
 
     // varname : type
