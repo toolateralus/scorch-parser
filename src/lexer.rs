@@ -33,19 +33,19 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("%"), TokenKind::Modulo),
         (String::from("!"), TokenKind::Not),
     ]);
-
+    
     let keywords = HashMap::from([
         (String::from("const"), TokenKind::Const),
         (String::from("var"), TokenKind::Var),
         (String::from("return"), TokenKind::Return),
-        (String::from("break"), TokenKind::Break),
         (String::from("if"), TokenKind::If),
         (String::from("else"), TokenKind::Else),
         (String::from("new"), TokenKind::New),
         (String::from("struct"), TokenKind::Struct),
         (String::from("repeat"), TokenKind::Repeat),
+        (String::from("within"), TokenKind::Within),
     ]);
-
+    
     let tokenizer = Tokenizer {
         operators,
         keywords,
@@ -116,27 +116,26 @@ pub enum TokenKind {
     If,
     Else,
     Repeat,
-
-    Return, // todo: design return. idk how we should do this @Cooper-Pilot
+    Return,
     Eof,
-
+    
     DubColon, // ::
-
+    
     // special operators
     Dot,    // .
     Pipe,   // |
     Lambda, // =
     Arrow,  // ->
-
+    
     ColonEquals, // :=
-
+    
     Const,
     Var,
-
+    
     Assignment, // =
-    Break,
     Struct,
     New,
+    Within,
 }
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -186,7 +185,7 @@ impl TokenProcessor for Tokenizer {
             let mut size_at_last_newline = 0;
             if current == '\'' || current == '\"' {
                 let start = current;
-
+                
                 let mut string = String::new();
                 loop {
                     if current == '\n' || current == '\r' {

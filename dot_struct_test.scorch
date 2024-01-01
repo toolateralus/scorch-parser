@@ -1,0 +1,11 @@
+struct MyStruct |
+	name : string
+	num : int
+|
+thing = 5
+m_struct := new MyStruct("", 0)
+m_struct.name = "xaryu"
+m_struct.num = 4
+
+println(m_struct.name)
+println(m_struct.num)
