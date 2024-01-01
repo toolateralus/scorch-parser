@@ -38,7 +38,6 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("const"), TokenKind::Const),
         (String::from("var"), TokenKind::Var),
         (String::from("return"), TokenKind::Return),
-        (String::from("break"), TokenKind::Break),
         (String::from("if"), TokenKind::If),
         (String::from("else"), TokenKind::Else),
         (String::from("new"), TokenKind::New),
@@ -135,7 +134,6 @@ pub enum TokenKind {
     Var,
 
     Assignment, // =
-    Break,
     Struct,
     New,
     Within,

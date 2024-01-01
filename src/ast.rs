@@ -75,7 +75,7 @@ pub enum Node {
     // weaving it in with factors.
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
-    BreakStmnt(Option<Box<Node>>),
+    ReturnStmnt(Option<Box<Node>>),
 
     Expression(Box<Node>),
     // Statements
@@ -178,7 +178,7 @@ impl Node {
 
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
             Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
-            Node::BreakStmnt(..) => visitor.visit_break_stmnt(self),
+            Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
             Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
             
