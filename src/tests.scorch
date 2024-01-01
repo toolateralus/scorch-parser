@@ -6,6 +6,9 @@ within X {
     funcy_test : int() {
         return 100
     }
+    funcy_tester : int(this: X) {
+        return this.funcy_test()
+    }
 }
 
 x := new X()
