@@ -5,7 +5,7 @@ pub mod parser;
 #[cfg(test)]
 mod tests {
     use lexer::{create_tokenizer, TokenProcessor};
-
+    
     use super::*;
 
     #[test]
@@ -20,7 +20,7 @@ struct X |
 
 X :: {
     funcy_test :=  {
-        break 100
+        return 100
     }
 }
         
@@ -221,14 +221,14 @@ assert(result && i == 10000, 'Test: Cached repeat with condition failed, expecte
 repeat z < 250000 {
     if z == 249999 {
         result1 = true
-        break
+        return
     }
 } 
 
 assert(result1, 'Test: Implicitly declared iterator repeat with condition failed.')
 
 repeat {
-    break
+    return
     println('test: repeat without condition failing.. result is this infinite loop. please exit.')
 }
 

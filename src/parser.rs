@@ -896,7 +896,7 @@ fn parse_keyword_ops(
     match keyword.kind {
         TokenKind::Const => parse_const(index, next_token, tokens, keyword),
         TokenKind::Var => parse_var(index, next_token, tokens, keyword),
-        TokenKind::Break => parse_break(index, next_token, tokens),
+        TokenKind::Return => parse_return(index, next_token, tokens),
         TokenKind::Repeat => parse_repeat_stmnt(next_token, index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
         TokenKind::Else => {
@@ -1045,14 +1045,14 @@ fn parse_var(
     })
 }
 
-fn parse_break(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+fn parse_return(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     *index += 1;
     // discard break
     match second.kind {
-        TokenKind::Newline => Ok(Node::BreakStmnt(None)),
+        TokenKind::Newline => Ok(Node::ReturnStmnt(None)),
         _ if second.kind != TokenKind::CloseCurlyBrace => {
             let value = parse_expression(tokens, index)?;
-            Ok(Node::BreakStmnt(Some(Box::new(value))))
+            Ok(Node::ReturnStmnt(Some(Box::new(value))))
         }
         _ => Err(PrsErr{
             message: String::from("unexpected token in break statement"),
