@@ -1001,21 +1001,13 @@ fn parse_struct_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
-
-        let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
-            *index += 1;
-            consume_newlines(index, tokens);
-            true
-        } else {
-            false
-        };
-
+        
         if token.kind == TokenKind::Pipe {
             *index += 1;
             break;
         }
-
-        match parse_decl(token, index, tokens, mutable) {
+        
+        match parse_statement(tokens, index).unwrap() {
             Ok(node) => statements.push(Box::new(node)),
             Err(_) => panic!("Expected statement node"),
         }

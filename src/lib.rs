@@ -13,9 +13,17 @@ mod tests {
         // todo: make testing much much better in this project.
         // tests for both tokenizer and parser, individual rules & actual unit size tests.
         let input = "
-        
+
+const x := 0
+const y := 1020
+var y := 100
+var z := 100
+
 struct X |
-    
+    const z := 10
+	const y : int = 0
+	const n : double
+	var z := new X()
 |
 
 X :: {
