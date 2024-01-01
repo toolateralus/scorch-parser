@@ -1031,7 +1031,7 @@ fn parse_const(
     first: &Token,
 ) -> Result<Node, PrsErr> {
     // consume 'const'
-    *index += 1;
+    *index += 2;
     let varname = second;
     match parse_decl(varname, index, tokens, false) {
         Ok(node) => Ok(node),
