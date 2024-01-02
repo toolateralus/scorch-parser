@@ -630,7 +630,7 @@ fn parse_explicit_decl(
         
         let fn_def = match &val {
             Ok(fn_def) => fn_def,
-            Err(inner_err) => {
+            Err(_inner_err) => {
                 return Err(PrsErr{
                     message: dbgmsg!("explicit decl err: Expected function body (INNER EXCEPTION HIDDEN DUE TO OWNERSHIP ISSUES)"),
                     token: get_current(tokens, index).clone(),
@@ -998,7 +998,7 @@ fn parse_var(
     index: &mut usize,
     second: &Token,
     tokens: &Vec<Token>,
-    first: &Token,
+    _first: &Token,
 ) -> Result<Node, PrsErr> {
     // consume 'var' and identifier
     *index += 2;
@@ -1035,7 +1035,7 @@ fn parse_const(
     index: &mut usize,
     second: &Token,
     tokens: &Vec<Token>,
-    first: &Token,
+    _first: &Token,
 ) -> Result<Node, PrsErr> {
     // consume 'const'
     *index += 1;

@@ -25,6 +25,7 @@ mod tests {
     
     #[test]
     fn test_main() {
+        
         // todo: make testing much much better in this project.
         // tests for both tokenizer and parser, individual rules & actual unit size tests.
         

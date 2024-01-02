@@ -3,35 +3,44 @@ use std::collections::HashMap;
 
 pub fn create_tokenizer() -> Tokenizer {
     let operators = HashMap::from([
-        (String::from("("), TokenKind::OpenParenthesis),
-        (String::from(")"), TokenKind::CloseParenthesis),
-        (String::from("{"), TokenKind::OpenCurlyBrace),
-        (String::from("}"), TokenKind::CloseCurlyBrace),
-        (String::from("["), TokenKind::OpenBracket),
-        (String::from("]"), TokenKind::CloseBracket),
-        (String::from(","), TokenKind::Comma),
-        (String::from("::"), TokenKind::DubColon),
-        (String::from(":"), TokenKind::Colon),
-        (String::from("="), TokenKind::Assignment),
-        (String::from("=="), TokenKind::Equals),
-        (String::from("!="), TokenKind::NotEquals),
-        (String::from("<="), TokenKind::LessThanEquals),
-        (String::from(">="), TokenKind::GreaterThanEquals),
-        (String::from("<"), TokenKind::LeftAngle),
-        (String::from(">"), TokenKind::RightAngle),
-        (String::from("&&"), TokenKind::LogicalAnd),
-        (String::from("->"), TokenKind::Arrow),
-        (String::from(":="), TokenKind::ColonEquals),
-        (String::from("|"), TokenKind::Pipe),
-        (String::from("."), TokenKind::Dot),
-        (String::from("=>"), TokenKind::Lambda),
-        (String::from("||"), TokenKind::LogicalOr),
+        // arithmetic operators
         (String::from("+"), TokenKind::Add),
         (String::from("-"), TokenKind::Subtract),
         (String::from("*"), TokenKind::Multiply),
         (String::from("/"), TokenKind::Divide),
-        (String::from("%"), TokenKind::Modulo),
+        
+        // Delimiters
+        (String::from("["), TokenKind::OpenBracket),
+        (String::from("]"), TokenKind::CloseBracket),
+        (String::from("("), TokenKind::OpenParenthesis),
+        (String::from(")"), TokenKind::CloseParenthesis),
+        (String::from("{"), TokenKind::OpenCurlyBrace),
+        (String::from("}"), TokenKind::CloseCurlyBrace),
+        (String::from("|"), TokenKind::Pipe),
+    
+        // unary operators. note :: subtract doubles as a unary and binary operator.
         (String::from("!"), TokenKind::Not),
+        
+        // Punctuation
+        (String::from("."), TokenKind::Dot),
+        (String::from(","), TokenKind::Comma),
+        (String::from(":"), TokenKind::Colon),
+        
+        (String::from(":="), TokenKind::ColonEquals),
+        (String::from("="), TokenKind::Assignment),
+        
+        // relational operators
+        (String::from("=="), TokenKind::Equals),
+        (String::from("!="), TokenKind::NotEquals),
+        
+        (String::from("<="), TokenKind::LessThanEquals),
+        (String::from(">="), TokenKind::GreaterThanEquals),
+        
+        (String::from("<"), TokenKind::LeftAngle),
+        (String::from(">"), TokenKind::RightAngle),
+        
+        (String::from("&&"), TokenKind::LogicalAnd),
+        (String::from("||"), TokenKind::LogicalOr),
     ]);
     
     let keywords = HashMap::from([
@@ -69,73 +78,62 @@ pub enum TokenFamily {
 }
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenKind {
-    Undefined = 0,
+    Undefined = 0, // undefined token.. indicating an error always.
     // values
-    Number,
-    String,
-    Bool,
-    Boolean,
+    Number, // 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
+    String, // "hello world"
+    Bool, // true or false
 
     // identifiers
-    Identifier,
-
+    Identifier, // variable name, function name, etc.
+    
     // operators
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo, // todo:
-
-    Equals,
-    NotEquals,
-    LessThanEquals,
-    GreaterThanEquals,
-
-    LeftAngle,
-    RightAngle,
-
-    LogicalAnd,
-    LogicalOr,
-    Not,
-
-    // punctuation
-    Newline,
-
-    OpenParenthesis,
-    CloseParenthesis,
-
-    OpenCurlyBrace,
-    CloseCurlyBrace,
-
-    OpenBracket,
-    CloseBracket,
-
-    Comma,
-    Colon,
-
-    If,
-    Else,
-    Repeat,
-    Return,
-    Eof,
+    Add, // +
+    Subtract, // -
+    Multiply, // *
+    Divide, // /
     
-    DubColon, // ::
+    Equals,// ==
+    NotEquals, // != 
+    LessThanEquals, // <=
+    GreaterThanEquals, // >=
     
+    LeftAngle, // < 
+    RightAngle, // >
+    
+    LogicalAnd, // &&
+    LogicalOr, // ||
+    Not, // !
+    
+    Colon, // : // type annotation operator.
+    ColonEquals, // := implicit declaration operator.
+    Assignment, // = 
     // special operators
-    Dot,    // .
-    Pipe,   // |
-    Lambda, // =
-    Arrow,  // ->
+    Dot,    // . access operator.
+    Pipe,   // struct body delimiter.
     
-    ColonEquals, // :=
+    // punctuation
+    Newline, // \n .. our expression delimiter, in place of ; 
     
-    Const,
-    Var,
+    OpenParenthesis, // (
+    CloseParenthesis, // )
+    OpenCurlyBrace, // {
+    CloseCurlyBrace, // }
+    OpenBracket, // [
+    CloseBracket, // ]
+    Comma, // ,
+    Eof, // end of file.
     
-    Assignment, // =
-    Struct,
-    New,
-    Within,
+    // KEYWORDS
+    If, // if comparison {...}
+    Else, // else || else comparison {...}
+    Repeat, // repeat {..} || repeat ID comparison {..} // if ID doesnt exist its implied to be 0.
+    Return, // return expr
+    Struct, // struct TypeName | field_decl ... | 
+    New, // new Typename() || new Typename{}
+    Within, // within TypeName {.. function declarations ..}
+    Const, // const varname : Type = value || const func : fn() {..} || const v := 100
+    Var, // var varname : Type = value || var func : fn() {..} || var v := 100
 }
 #[derive(Debug, Clone)]
 pub struct Token {
