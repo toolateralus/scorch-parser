@@ -240,8 +240,8 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
                 typename: ARRAY_TNAME.to_string(),
                 elements: init.clone(),
                 init_capacity: init.len(),
-                mutable: false,
-                elements_mutable: false,
+                mutable: true,
+                elements_mutable: true,
             })
         }
         TokenKind::OpenParenthesis => {
