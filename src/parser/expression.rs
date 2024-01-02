@@ -1,6 +1,8 @@
 use crate::parser::literal::parse_struct_init;
 
 use super::super::*;
+use super::debug::*;
+use super::function::parse_fn_call;
 use super::keyword::parse_repeat_stmnt;
 use super::literal::{parse_array_initializer, parse_digits};
 use super::*;

@@ -1,4 +1,5 @@
 use super::super::*;
+use super::debug::{ErrType, PrsErr};
 use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
 use super::expression::parse_expression;
 use super::*;

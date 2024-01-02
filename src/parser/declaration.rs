@@ -1,12 +1,15 @@
 // declarations
 
+use super::super::*;
+use super::{
+    debug::*,
+    function::{parse_fn_call, parse_fn_decl, parse_parameters},
+};
+use super::{expression::parse_expression, *};
 use crate::{
     ast::Node,
     lexer::{Token, TokenFamily, TokenKind},
 };
-
-use super::super::*;
-use super::{expression::parse_expression, *};
 
 pub fn parse_type_assoc_decl_block(
     index: &mut usize,
@@ -46,7 +49,7 @@ pub fn parse_type_assoc_decl_block(
                 inner_err
             ),
         }
-        
+
         token = get_current(tokens, index);
 
         if token.kind == TokenKind::Comma || token.kind == TokenKind::Newline {
@@ -102,14 +105,10 @@ pub fn parse_decl_stmnt(
     let operator = get_current(tokens, index);
 
     match operator.kind {
-        // varname := default;
-        // declaring a variable with implicit type.
         TokenKind::ColonEquals => parse_implicit_decl(index, tokens, &id, mutable),
-        // declaraing a variable with explicit type.
         TokenKind::Colon => parse_explicit_decl(index, tokens, token, id, mutable),
-        // assigning a value to an already declared variable.
         TokenKind::Assignment => {
-            *index += 1;
+            consume_next_if_type(tokens, index, TokenKind::Assignment);
             let id = Node::Identifier(token.value.clone());
             let expression = parse_expression(tokens, index)?;
             consume_normal_expr_delimiter(tokens, index);
@@ -119,7 +118,7 @@ pub fn parse_decl_stmnt(
             })
         }
         TokenKind::OpenBracket => {
-            *index += 1; // discard [
+            consume_next_if_type(tokens, index, TokenKind::OpenBracket);
             let access = parse_array_access(index, tokens, token.value.as_str());
             access
         }
@@ -156,7 +155,7 @@ pub fn parse_implicit_decl(
     id: &String,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    *index += 1;
+    consume_next_if_type(tokens, index, TokenKind::ColonEquals);
 
     if get_current(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
@@ -196,24 +195,22 @@ pub fn parse_explicit_decl(
 
         let return_type = target_t.to_string();
         let params = parse_parameters(tokens, index)?;
-        
+
         let Some(Ok(val)) = parse_fn_decl(&params, tokens, index, &id, return_type, mutable) else {
-            return Err(
-                PrsErr {
-                    message: dbgmsg!("decl err: Expected function declaration"),
-                    token: get_current(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-                    inner_err: None,
-                }
-            )
+            return Err(PrsErr {
+                message: dbgmsg!("decl err: Expected function declaration"),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+                inner_err: None,
+            });
         };
-    
+
         return Ok(val.clone());
     }
-    
+
     // varname : type^ = default;
-    
+
     let token = get_current(tokens, index);
 
     // varname : type

@@ -1,5 +1,6 @@
 use super::*;
 
+use super::debug::PrsErr;
 use super::expression::parse_expression;
 pub fn parse_digits(identifier: &Token) -> Result<Node, PrsErr> {
     let int = identifier.value.parse::<i32>();
@@ -62,6 +63,7 @@ pub fn parse_struct_init(
             }
             _ => {
                 args.push(parse_expression(tokens, index)?);
+
                 if get_current(tokens, index).kind == TokenKind::Comma {
                     *index += 1;
                 }
