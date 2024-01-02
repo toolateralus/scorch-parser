@@ -41,6 +41,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("return"), TokenKind::Return),
         (String::from("if"), TokenKind::If),
         (String::from("else"), TokenKind::Else),
+        (String::from("override"), TokenKind::Override),
         (String::from("new"), TokenKind::New),
         (String::from("struct"), TokenKind::Struct),
         (String::from("repeat"), TokenKind::Repeat),
@@ -125,7 +126,8 @@ pub enum TokenKind {
     New,    // new Typename() || new Typename{}
     Within, // within TypeName {.. function declarations ..}
     Const,  // const varname : Type = value || const func : fn() {..} || const v := 100
-    Var,    // var varname : Type = value || var func : fn() {..} || var v := 100
+    Var,
+    Override,    // var varname : Type = value || var func : fn() {..} || var v := 100
 }
 #[derive(Debug, Clone)]
 pub struct Token {

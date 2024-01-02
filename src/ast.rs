@@ -22,6 +22,7 @@ pub trait Visitor<T> {
     fn visit_break_stmnt(&mut self, node: &Node) -> T;
     fn visit_relational_expression(&mut self, node: &Node) -> T;
     fn visit_logical_expression(&mut self, node: &Node) -> T;
+    fn visit_op_ovr_decl(&mut self, node: &Node) -> T;
     // unary operations
     fn visit_not_op(&mut self, node: &Node) -> T;
     fn visit_neg_op(&mut self, node: &Node) -> T;
@@ -149,6 +150,7 @@ pub enum Node {
         typename: String,
         block: Box<Node>,
     },
+    OpOverrideDecl { op: TokenKind, func: Box<Node> },
 }
 impl Node {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -191,6 +193,7 @@ impl Node {
 
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
+            Node::OpOverrideDecl { op, func } => visitor.visit_op_ovr_decl(self),
         }
     }
 }
