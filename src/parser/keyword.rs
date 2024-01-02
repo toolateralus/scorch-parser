@@ -20,7 +20,7 @@ pub fn parse_return(
         }
         _ => Err(PrsErr {
             message: dbgmsg!("break err: Unexpected token"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
             inner_err: None,
@@ -86,7 +86,7 @@ pub fn parse_keyword_ops(
         TokenKind::Else => {
             return Err(PrsErr {
                 message: dbgmsg!("Unexpected else statement.. else must follow an if."),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -96,7 +96,7 @@ pub fn parse_keyword_ops(
         _ => {
             return Err(PrsErr {
                 message: dbgmsg!("unexpected token"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -109,10 +109,10 @@ pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     *index += 1; // discard 'if'
     let if_condition = parse_expression(tokens, index)?;
 
-    if get_current(tokens, index).kind != TokenKind::OpenCurlyBrace {
+    if current_token(tokens, index).kind != TokenKind::OpenCurlyBrace {
         return Err(PrsErr {
             message: dbgmsg!("Expected open curly brace after if condition"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
             inner_err: None,
@@ -132,7 +132,7 @@ pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             Err(inner_err) => {
                 return Err(PrsErr {
                     message: dbgmsg!("Expected else statement"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: Some(Box::new(inner_err)),
@@ -161,11 +161,11 @@ pub fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
     let _ = consume_newlines(index, tokens);
 
     // if else with no comparison -> if ... {} else {}
-    if get_current(tokens, index).kind == TokenKind::OpenCurlyBrace {
+    if current_token(tokens, index).kind == TokenKind::OpenCurlyBrace {
         let else_block = parse_block(tokens, index)?;
 
         // Check for another else after this block
-        if get_current(tokens, index).kind == TokenKind::Else {
+        if current_token(tokens, index).kind == TokenKind::Else {
             let nested_else = parse_else(tokens, index)?;
             return Ok(Node::ElseStmnt {
                 condition: Option::None,
@@ -183,7 +183,7 @@ pub fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
     // if else with comparison -> if ... {} else ... {}
     else {
         let else_condition = parse_expression(tokens, index)?;
-        let cur = get_current(tokens, index);
+        let cur = current_token(tokens, index);
 
         match cur.kind {
             TokenKind::OpenCurlyBrace | TokenKind::CloseParenthesis => {
@@ -196,7 +196,7 @@ pub fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
 
         let else_block = parse_block(tokens, index)?;
 
-        if get_current(tokens, index).kind == TokenKind::Else {
+        if current_token(tokens, index).kind == TokenKind::Else {
             let nested_else = parse_else(tokens, index)?;
             return Ok(Node::ElseStmnt {
                 condition: Option::Some(Box::new(else_condition)),

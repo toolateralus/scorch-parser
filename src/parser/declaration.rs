@@ -1,6 +1,7 @@
 // declarations
 
 use super::super::*;
+use super::literal::parse_array_access;
 use super::{
     debug::*,
     function::{parse_fn_call, parse_fn_decl, parse_parameters},
@@ -50,7 +51,7 @@ pub fn parse_type_assoc_decl_block(
             ),
         }
 
-        token = get_current(tokens, index);
+        token = current_token(tokens, index);
 
         if token.kind == TokenKind::Comma || token.kind == TokenKind::Newline {
             *index += 1;
@@ -86,7 +87,7 @@ pub fn parse_struct_decl_block(
             ),
         }
 
-        token = get_current(tokens, index);
+        token = current_token(tokens, index);
 
         if token.kind == TokenKind::Comma {
             *index += 1;
@@ -102,7 +103,7 @@ pub fn parse_decl_stmnt(
 ) -> Result<Node, PrsErr> {
     let id = token.value.clone();
 
-    let operator = get_current(tokens, index);
+    let operator = current_token(tokens, index);
 
     match operator.kind {
         TokenKind::ColonEquals => parse_implicit_decl(index, tokens, &id, mutable),
@@ -111,7 +112,7 @@ pub fn parse_decl_stmnt(
             consume_next_if_type(tokens, index, TokenKind::Assignment);
             let id = Node::Identifier(token.value.clone());
             let expression = parse_expression(tokens, index)?;
-            consume_normal_expr_delimiter(tokens, index);
+            consume_delimiter(tokens, index);
             Ok(Node::AssignStmnt {
                 id: Box::new(id),
                 expression: Box::new(expression),
@@ -128,7 +129,7 @@ pub fn parse_decl_stmnt(
             let Some(node) = parse_fn_call(index, tokens, &token.value.clone()) else {
                 return Err(PrsErr {
                     message: dbgmsg!("decl err: Expected function call"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
@@ -140,7 +141,7 @@ pub fn parse_decl_stmnt(
         _ => {
             return Err(PrsErr {
                 message: dbgmsg!("decl err: invalid operator"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -157,14 +158,14 @@ pub fn parse_implicit_decl(
 ) -> Result<Node, PrsErr> {
     consume_next_if_type(tokens, index, TokenKind::ColonEquals);
 
-    if get_current(tokens, index).kind == TokenKind::Newline {
+    if current_token(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
     }
 
     // implicit variable declaration
     let value = parse_expression(tokens, index)?;
 
-    consume_normal_expr_delimiter(tokens, index);
+    consume_delimiter(tokens, index);
 
     Ok(Node::DeclStmt {
         target_type: String::from("dynamic"),
@@ -183,12 +184,12 @@ pub fn parse_explicit_decl(
 ) -> Result<Node, PrsErr> {
     consume_next_if_type(tokens, index, TokenKind::Colon);
 
-    let type_token = get_current(tokens, index);
+    let type_token = current_token(tokens, index);
     let target_t = type_token.value.clone();
 
     consume_next_if_type(tokens, index, TokenKind::Identifier);
 
-    let token = get_current(tokens, index);
+    let token = current_token(tokens, index);
 
     if token.kind == TokenKind::OpenParenthesis {
         consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
@@ -199,7 +200,7 @@ pub fn parse_explicit_decl(
         let Some(Ok(val)) = parse_fn_decl(&params, tokens, index, &id, return_type, mutable) else {
             return Err(PrsErr {
                 message: dbgmsg!("decl err: Expected function declaration"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -211,14 +212,14 @@ pub fn parse_explicit_decl(
 
     // varname : type^ = default;
 
-    let token = get_current(tokens, index);
+    let token = current_token(tokens, index);
 
     // varname : type
     // uninitialized ((default for now))
     if token.kind == TokenKind::Newline {
         *index += 1;
 
-        let default_value_expression = create_default_value_for_type(&target_t, mutable)?;
+        let default_value_expression = default_of_t(&target_t, mutable)?;
 
         return Ok(Node::DeclStmt {
             target_type: target_t,
@@ -233,7 +234,7 @@ pub fn parse_explicit_decl(
     // varname : type = ^default;
 
     let expression = parse_expression(tokens, index)?;
-    consume_normal_expr_delimiter(tokens, index);
+    consume_delimiter(tokens, index);
     Ok(Node::DeclStmt {
         target_type: target_t,
         id,
@@ -244,7 +245,7 @@ pub fn parse_explicit_decl(
 
 pub fn parse_type_assoc_block(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     consume_next_if_type(tokens, index, TokenKind::Within);
-    let typename = get_current(tokens, index);
+    let typename = current_token(tokens, index);
     consume_next_if_type(tokens, index, TokenKind::Identifier);
     consume_next_if_type(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
@@ -264,12 +265,12 @@ pub fn parse_struct_decl(
     consume_next_if_type(tokens, index, TokenKind::Identifier);
 
     let id = identifier.value.clone();
-    let mut token = get_current(tokens, index);
+    let mut token = current_token(tokens, index);
 
     if token.kind != TokenKind::Pipe {
         return Err(PrsErr {
             message: dbgmsg!("Expected pipe token after struct identifier"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
             inner_err: None,

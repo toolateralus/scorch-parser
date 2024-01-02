@@ -5,7 +5,7 @@ pub mod function;
 pub mod keyword;
 pub mod literal;
 
-use crate::ast::{ARRAY_TNAME, BOOL_TNAME, DOUBLE_TNAME, INT_TNAME, STRING_TNAME};
+use crate::ast::{ARRAY_TNAME, BOOL_TNAME, DOUBLE_TNAME, DYNAMIC_TNAME, INT_TNAME, STRING_TNAME};
 use rand::Rng;
 
 use self::{
@@ -13,6 +13,7 @@ use self::{
     declaration::parse_decl_stmnt,
     expression::parse_expression,
     keyword::parse_keyword_ops,
+    literal::new_array,
 };
 
 use super::*;
@@ -20,171 +21,6 @@ use super::{
     ast::Node,
     lexer::{Token, TokenFamily, TokenKind},
 };
-
-pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Result<Node, PrsErr> {
-    let default_value_expression = match target_type.as_str() {
-        DOUBLE_TNAME => Node::Expression(Box::new(Node::Double(0.0))),
-        STRING_TNAME => Node::Expression(Box::new(Node::String(String::from("")))),
-        BOOL_TNAME => Node::Expression(Box::new(Node::Bool(false))),
-        ARRAY_TNAME => {
-            let elements = Vec::new();
-            let init_capacity = elements.len();
-            let typename = String::from("dynamic");
-            let elements_mutable = mutable;
-            let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
-            Node::Expression(Box::new(arr))
-        }
-        INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
-        _ => Node::Expression(Box::new(Node::Undefined())),
-    };
-    Ok(default_value_expression)
-}
-
-pub fn get_current<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> &'a Token {
-    if let Some(token) = tokens.get(*index) {
-        return token;
-    } else {
-        panic!("Unexpected end of tokens");
-    }
-}
-pub fn consume_newlines<'a>(index: &mut usize, tokens: &'a Vec<Token>) -> &'a Token {
-    let mut current = get_current(tokens, index);
-    while current.kind == TokenKind::Newline {
-        *index += 1;
-        current = get_current(tokens, index);
-    }
-    return current;
-}
-pub fn consume_normal_expr_delimiter(tokens: &Vec<Token>, index: &mut usize) {
-    let current = get_current(tokens, index).kind;
-    match current {
-        TokenKind::OpenCurlyBrace | TokenKind::Comma => {
-            dbg!(current);
-            panic!("expected newline or ) token");
-        }
-        TokenKind::Newline => {
-            *index += 1;
-        }
-        TokenKind::CloseParenthesis => {
-            *index += 1;
-        }
-        _ => {
-            // continue
-        }
-    }
-}
-pub fn generate_random_function_name() -> String {
-    let mut rng = rand::thread_rng();
-    let letters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
-    let name: String = (0..8)
-        .map(|_| letters[rng.gen_range(0..letters.len())])
-        .collect();
-    name
-}
-pub fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
-    let current = get_current(tokens, index);
-    if current.kind != expected {
-        panic!("Expected {:?}, got {:?}", expected, current.kind);
-    }
-    *index += 1;
-}
-
-// arrays
-pub fn new_array(
-    typename: String,
-    init_capacity: usize,
-    elements: Vec<Box<Node>>,
-    mutable: bool,
-    elements_mutable: bool,
-) -> Node {
-    Node::Array {
-        typename,
-        init_capacity,
-        elements,
-        mutable,
-        elements_mutable, // todo: how do we want to qualify this?
-    }
-}
-
-pub fn parse_array_access(
-    index: &mut usize,
-    tokens: &Vec<Token>,
-    id: &str,
-) -> Result<Node, PrsErr> {
-    let accessor = match parse_expression(tokens, index) {
-        Ok(accessor) => accessor,
-        Err(inner_err) => {
-            return Err(PrsErr {
-                message: dbgmsg!(
-                    "invalid expression in array subscript accessor, ie [...this expression..]"
-                ),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-                inner_err: Some(Box::new(inner_err)),
-            });
-        }
-    };
-
-    let mut token = consume_newlines(index, tokens);
-
-    if token.kind == TokenKind::CloseBracket {
-        *index += 1; // move past ]
-        token = get_current(tokens, index);
-    }
-
-    let mut node = Node::ArrayAccessExpr {
-        id: id.to_string(),
-        index_expr: Box::new(accessor),
-        expression: None,
-        assignment: false,
-    };
-
-    if token.kind != TokenKind::Assignment {
-        return Ok(node);
-    }
-
-    match token.kind {
-        TokenKind::Assignment => {
-            *index += 1;
-            if let Node::ArrayAccessExpr {
-                id,
-                index_expr,
-                expression: _,
-                assignment: _,
-            } = node
-            {
-                let expression = match parse_expression(tokens, index) {
-                    Ok(expression) => expression,
-                    Err(inner_err) => {
-                        return Err(PrsErr {
-							message: dbgmsg!("invalid expression in array subscript accessor, ie [...this expression..]"),
-							token: get_current(tokens, index).clone(),
-							type_: ErrType::UnexpectedToken,
-							index : *index,
-							inner_err: Some(Box::new(inner_err))
-						});
-                    }
-                };
-
-                node = Node::ArrayAccessExpr {
-                    id,
-                    index_expr,
-                    expression: Option::Some(Box::new(expression)),
-                    assignment: true,
-                };
-            }
-            Ok(node)
-        }
-        _ => Err(PrsErr {
-            message: dbgmsg!("Expected assignment operator"),
-            token: get_current(tokens, index).clone(),
-            type_: ErrType::UnexpectedToken,
-            index: *index,
-            inner_err: None,
-        }),
-    }
-}
 
 pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     let mut index = 0;
@@ -208,7 +44,7 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
                 }
                 return Err(PrsErr {
                     message: dbgmsg!("program err: invalid statement"),
-                    token: get_current(tokens, &mut index).clone(),
+                    token: current_token(tokens, &mut index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index,
                     inner_err: Some(Box::new(inner_err)),
@@ -239,7 +75,7 @@ pub fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
                 }
                 return Err(PrsErr {
                     message: dbgmsg!("block err: invalid statement"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: Some(Box::new(inner_err)),
@@ -253,7 +89,7 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
     if *index >= tokens.len() {
         return Some(Err(PrsErr {
             message: dbgmsg!("Unexpected end of tokens"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedEof,
             index: *index,
             inner_err: None,
@@ -277,14 +113,14 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
                 Err(inner_err) => {
                     return Some(Err(PrsErr {
                         message: dbgmsg!("statement err: left side could not parse"),
-                        token: get_current(tokens, index).clone(),
+                        token: current_token(tokens, index).clone(),
                         type_: ErrType::UnexpectedToken,
                         index: *index,
                         inner_err: Some(Box::new(inner_err)),
                     }));
                 }
             };
-            return match get_current(tokens, index).kind {
+            return match current_token(tokens, index).kind {
                 TokenKind::ColonEquals | TokenKind::Colon => {
                     let decl = parse_decl_stmnt(first, index, tokens, false);
                     Some(decl)
@@ -296,14 +132,14 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
                         Err(inner_err) => {
                             return Some(Err(PrsErr {
                                 message: dbgmsg!("statement err: right side could not parse"),
-                                token: get_current(tokens, index).clone(),
+                                token: current_token(tokens, index).clone(),
                                 type_: ErrType::UnexpectedToken,
                                 index: *index,
                                 inner_err: Some(Box::new(inner_err)),
                             }));
                         }
                     };
-                    consume_normal_expr_delimiter(tokens, index);
+                    consume_delimiter(tokens, index);
                     Some(Ok(Node::AssignStmnt {
                         id: Box::new(left),
                         expression: Box::new(expression),
@@ -314,10 +150,77 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
         }
         _ => Some(Err(PrsErr {
             message: dbgmsg!("statement err: unexpected token"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
             inner_err: None,
         })),
     }
+}
+
+pub fn default_of_t(target_type: &String, mutable: bool) -> Result<Node, PrsErr> {
+    let default_value_expression = match target_type.as_str() {
+        DOUBLE_TNAME => Node::Expression(Box::new(Node::Double(0.0))),
+        STRING_TNAME => Node::Expression(Box::new(Node::String(String::from("")))),
+        BOOL_TNAME => Node::Expression(Box::new(Node::Bool(false))),
+        ARRAY_TNAME => {
+            let elements = Vec::new();
+            let init_capacity = elements.len();
+            let typename = String::from(DYNAMIC_TNAME);
+            let elements_mutable = mutable;
+            let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
+            Node::Expression(Box::new(arr))
+        }
+        INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
+        _ => Node::Expression(Box::new(Node::Undefined())),
+    };
+    Ok(default_value_expression)
+}
+pub fn current_token<'a>(tokens: &'a Vec<Token>, index: &mut usize) -> &'a Token {
+    if let Some(token) = tokens.get(*index) {
+        return token;
+    } else {
+        panic!("Unexpected end of tokens");
+    }
+}
+pub fn consume_newlines<'a>(index: &mut usize, tokens: &'a Vec<Token>) -> &'a Token {
+    let mut current = current_token(tokens, index);
+    while current.kind == TokenKind::Newline {
+        *index += 1;
+        current = current_token(tokens, index);
+    }
+    return current;
+}
+pub fn consume_delimiter(tokens: &Vec<Token>, index: &mut usize) {
+    let current = current_token(tokens, index).kind;
+    match current {
+        TokenKind::OpenCurlyBrace | TokenKind::Comma => {
+            dbg!(current);
+            panic!("expected newline or ) token");
+        }
+        TokenKind::Newline => {
+            *index += 1;
+        }
+        TokenKind::CloseParenthesis => {
+            *index += 1;
+        }
+        _ => {
+            // continue
+        }
+    }
+}
+pub fn generate_random_function_name() -> String {
+    let mut rng = rand::thread_rng();
+    let letters: Vec<char> = "abcdefghijklmnopqrstuvwxyz".chars().collect();
+    let name: String = (0..8)
+        .map(|_| letters[rng.gen_range(0..letters.len())])
+        .collect();
+    name
+}
+pub fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
+    let current = current_token(tokens, index);
+    if current.kind != expected {
+        panic!("Expected {:?}, got {:?}", expected, current.kind);
+    }
+    *index += 1;
 }

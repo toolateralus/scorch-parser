@@ -4,6 +4,7 @@ use super::super::*;
 use super::debug::*;
 use super::function::parse_fn_call;
 use super::keyword::parse_repeat_stmnt;
+use super::literal::parse_array_access;
 use super::literal::{parse_array_initializer, parse_digits};
 use super::*;
 
@@ -43,7 +44,7 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
             | TokenKind::Eof => break,
             _ => Err(PrsErr {
                 message: dbgmsg!("expression err: unexpected token"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -139,7 +140,7 @@ pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
 }
 
 pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    let op = get_current(tokens, index);
+    let op = current_token(tokens, index);
     match op.kind {
         TokenKind::Subtract | TokenKind::Not => {
             *index += 1;
@@ -163,7 +164,7 @@ pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
 
 pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_accessor(tokens, index)?;
-    let op = get_current(tokens, index);
+    let op = current_token(tokens, index);
     match op.kind {
         TokenKind::Dot => {
             *index += 1; // consume '.' operator.
@@ -180,7 +181,7 @@ pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
 
 pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_operand(tokens, index)?;
-    let op = get_current(tokens, index);
+    let op = current_token(tokens, index);
 
     match op.kind {
         TokenKind::OpenParenthesis => {
@@ -189,7 +190,7 @@ pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Pr
             } else {
                 Err(PrsErr {
                     message: dbgmsg!("accessor err: Expected identifier"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
@@ -203,7 +204,7 @@ pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Pr
             } else {
                 Err(PrsErr {
                     message: dbgmsg!("accessor err: Expected identifier"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
@@ -227,7 +228,7 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
 
         TokenKind::Identifier => Ok(Node::Identifier(identifier.value.clone())),
         TokenKind::New => {
-            let token = get_current(tokens, index);
+            let token = current_token(tokens, index);
             assert_eq!(
                 token.kind,
                 TokenKind::Identifier,
@@ -238,7 +239,7 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             let structname = token.clone();
             *index += 1;
 
-            let token = get_current(tokens, index);
+            let token = current_token(tokens, index);
             assert!(
                 token.kind == TokenKind::OpenCurlyBrace || token.kind == TokenKind::OpenParenthesis,
                 "Expected open curly brace token"
@@ -250,29 +251,24 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
         TokenKind::String => Ok(Node::String(identifier.value.clone())),
         TokenKind::OpenBracket => {
             let init = parse_array_initializer(tokens, index)?;
-            Ok(new_array(
-                "dynamic".to_string(),
-                init.len(),
-                init.clone(),
-                true,
-                false,
-            ))
+            Ok(Node::Array {
+                typename: ARRAY_TNAME.to_string(),
+                elements: init.clone(),
+                init_capacity: init.len(),
+                mutable: false,
+                elements_mutable: false,
+            })
         }
         TokenKind::OpenParenthesis => {
             let node = parse_expression(tokens, index)?;
-            assert_eq!(
-                tokens.get(*index).map(|t| t.kind),
-                Some(TokenKind::CloseParenthesis),
-                "Expected close parenthesis token"
-            );
-            *index += 1;
+            consume_next_if_type(tokens, index, TokenKind::CloseParenthesis);
             Ok(node)
         }
 
-        TokenKind::Repeat => parse_repeat_stmnt(get_current(tokens, index), index, tokens),
+        TokenKind::Repeat => parse_repeat_stmnt(current_token(tokens, index), index, tokens),
         _ => Err(PrsErr {
             message: dbgmsg!("operand err: Unexpected token"),
-            token: get_current(tokens, index).clone(),
+            token: current_token(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
             inner_err: None,

@@ -5,16 +5,17 @@ use crate::{
 };
 
 use super::{
+    current_token,
     debug::*,
     expression::{parse_expression, parse_operand},
-    get_current, parse_block,
+    parse_block,
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
     let mut params = Vec::new();
 
     loop {
-        let mut token = get_current(tokens, index);
+        let mut token = current_token(tokens, index);
 
         if token.kind == TokenKind::CloseParenthesis {
             *index += 1;
@@ -26,7 +27,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         if token.family != TokenFamily::Identifier {
             Err(PrsErr {
                 message: dbgmsg!("parameter err: expected identifier"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: None,
@@ -35,7 +36,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
 
         let varname = parse_operand(tokens, index)?;
 
-        token = get_current(tokens, index);
+        token = current_token(tokens, index);
 
         //parsing colon
         // varname^: Typename
@@ -43,7 +44,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
             TokenKind::ColonEquals => {
                 return Err(PrsErr{
                     message: dbgmsg!("implicit typed / default value parameters are not yet implemented. coming soon B)"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
 					inner_err: None
@@ -58,7 +59,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
                     message: dbgmsg!(
                         "Expected colon token after variable name in parameter declaration"
                     ),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
@@ -71,7 +72,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         let typename = parse_operand(tokens, index)?;
 
         // consume comma if there is one.
-        if get_current(tokens, index).kind == TokenKind::Comma {
+        if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
 
@@ -90,7 +91,7 @@ pub fn parse_arguments(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Nod
     let mut args = Vec::new();
 
     loop {
-        let token = get_current(tokens, index);
+        let token = current_token(tokens, index);
         // paramless.
         if token.kind == TokenKind::CloseParenthesis {
             *index += 1;
@@ -100,7 +101,7 @@ pub fn parse_arguments(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Nod
         let arg = parse_expression(tokens, index)?;
 
         // skip commas
-        if get_current(tokens, index).kind == TokenKind::Comma {
+        if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
 
@@ -116,7 +117,7 @@ pub fn parse_fn_decl(
     return_type: String,
     mutable: bool,
 ) -> Option<Result<Node, PrsErr>> {
-    let token = get_current(tokens, index);
+    let token = current_token(tokens, index);
     let kind = token.kind;
     if kind == TokenKind::OpenCurlyBrace {
         let body = match parse_block(tokens, index) {
@@ -124,7 +125,7 @@ pub fn parse_fn_decl(
             Err(inner_err) => {
                 return Some(Err(PrsErr {
                     message: dbgmsg!("fn decl err: invalid block"),
-                    token: get_current(tokens, index).clone(),
+                    token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: Some(Box::new(inner_err)),
@@ -153,7 +154,7 @@ pub fn parse_fn_call(
         Err(inner_err) => {
             return Some(Err(PrsErr {
                 message: dbgmsg!("Expected arguments"),
-                token: get_current(tokens, index).clone(),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
                 inner_err: Some(Box::new(inner_err)),
