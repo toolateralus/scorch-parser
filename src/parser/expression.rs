@@ -1,9 +1,10 @@
 use crate::parser::literal::parse_struct_init;
 
-use super::*;
 use super::super::*;
 use super::keyword::parse_repeat_stmnt;
-use super::literal::{parse_digits, parse_array_initializer};
+use super::literal::{parse_array_initializer, parse_digits};
+use super::*;
+
 pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_logical(tokens, index)?;
 
@@ -35,21 +36,22 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
             | TokenKind::Newline
             | TokenKind::Comma
             | TokenKind::Assignment
-			| TokenKind::ColonEquals
-			| TokenKind::Colon 
+            | TokenKind::ColonEquals
+            | TokenKind::Colon
             | TokenKind::Eof => break,
-            _ => Err(PrsErr{
+            _ => Err(PrsErr {
                 message: dbgmsg!("expression err: unexpected token"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-				inner_err: None
+                inner_err: None,
             })?,
         }
     }
-    
+
     Ok(Node::Expression(Box::new(left)))
 }
+
 pub fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_relational(tokens, index)?;
     while let Some(token) = tokens.get(*index) {
@@ -68,6 +70,7 @@ pub fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     }
     Ok(left)
 }
+
 pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_bin_op(tokens, index)?;
 
@@ -92,6 +95,7 @@ pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
     }
     Ok(left)
 }
+
 pub fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_term(tokens, index)?;
     while let Some(token) = tokens.get(*index) {
@@ -110,6 +114,7 @@ pub fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsE
     }
     Ok(left)
 }
+
 pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_unary(tokens, index)?;
 
@@ -130,9 +135,9 @@ pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
 
     Ok(left)
 }
+
 pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let op = get_current(tokens, index);
-
     match op.kind {
         TokenKind::Subtract | TokenKind::Not => {
             *index += 1;
@@ -153,6 +158,7 @@ pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
         _ => parse_dot(tokens, index),
     }
 }
+
 pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_accessor(tokens, index)?;
     let op = get_current(tokens, index);
@@ -169,6 +175,7 @@ pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
         _ => Ok(left),
     }
 }
+
 pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_operand(tokens, index)?;
     let op = get_current(tokens, index);
@@ -183,7 +190,7 @@ pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Pr
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
-					inner_err: None
+                    inner_err: None,
                 })
             }
         }
@@ -197,13 +204,14 @@ pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Pr
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
-					inner_err: None
+                    inner_err: None,
                 })
             }
         }
         _ => Ok(left),
     }
 }
+
 pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let identifier = tokens
         .get(*index)
@@ -258,14 +266,14 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             *index += 1;
             Ok(node)
         }
-        
+
         TokenKind::Repeat => parse_repeat_stmnt(get_current(tokens, index), index, tokens),
         _ => Err(PrsErr {
             message: dbgmsg!("operand err: Unexpected token"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
-			inner_err: None
+            inner_err: None,
         }),
     }
 }

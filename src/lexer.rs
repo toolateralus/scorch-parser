@@ -8,7 +8,6 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("-"), TokenKind::Subtract),
         (String::from("*"), TokenKind::Multiply),
         (String::from("/"), TokenKind::Divide),
-        
         // Delimiters
         (String::from("["), TokenKind::OpenBracket),
         (String::from("]"), TokenKind::CloseBracket),
@@ -17,32 +16,25 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("{"), TokenKind::OpenCurlyBrace),
         (String::from("}"), TokenKind::CloseCurlyBrace),
         (String::from("|"), TokenKind::Pipe),
-    
         // unary operators. note :: subtract doubles as a unary and binary operator.
         (String::from("!"), TokenKind::Not),
-        
         // Punctuation
         (String::from("."), TokenKind::Dot),
         (String::from(","), TokenKind::Comma),
         (String::from(":"), TokenKind::Colon),
-        
         (String::from(":="), TokenKind::ColonEquals),
         (String::from("="), TokenKind::Assignment),
-        
         // relational operators
         (String::from("=="), TokenKind::Equals),
         (String::from("!="), TokenKind::NotEquals),
-        
         (String::from("<="), TokenKind::LessThanEquals),
         (String::from(">="), TokenKind::GreaterThanEquals),
-        
         (String::from("<"), TokenKind::LeftAngle),
         (String::from(">"), TokenKind::RightAngle),
-        
         (String::from("&&"), TokenKind::LogicalAnd),
         (String::from("||"), TokenKind::LogicalOr),
     ]);
-    
+
     let keywords = HashMap::from([
         (String::from("const"), TokenKind::Const),
         (String::from("var"), TokenKind::Var),
@@ -54,7 +46,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("repeat"), TokenKind::Repeat),
         (String::from("within"), TokenKind::Within),
     ]);
-    
+
     let tokenizer = Tokenizer {
         operators,
         keywords,
@@ -82,58 +74,58 @@ pub enum TokenKind {
     // values
     Number, // 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
     String, // "hello world"
-    Bool, // true or false
+    Bool,   // true or false
 
     // identifiers
     Identifier, // variable name, function name, etc.
-    
+
     // operators
-    Add, // +
+    Add,      // +
     Subtract, // -
     Multiply, // *
-    Divide, // /
-    
-    Equals,// ==
-    NotEquals, // != 
-    LessThanEquals, // <=
+    Divide,   // /
+
+    Equals,            // ==
+    NotEquals,         // !=
+    LessThanEquals,    // <=
     GreaterThanEquals, // >=
-    
-    LeftAngle, // < 
+
+    LeftAngle,  // <
     RightAngle, // >
-    
+
     LogicalAnd, // &&
-    LogicalOr, // ||
-    Not, // !
-    
-    Colon, // : // type annotation operator.
+    LogicalOr,  // ||
+    Not,        // !
+
+    Colon,       // : // type annotation operator.
     ColonEquals, // := implicit declaration operator.
-    Assignment, // = 
+    Assignment,  // =
     // special operators
-    Dot,    // . access operator.
-    Pipe,   // struct body delimiter.
-    
+    Dot,  // . access operator.
+    Pipe, // struct body delimiter.
+
     // punctuation
-    Newline, // \n .. our expression delimiter, in place of ; 
-    
-    OpenParenthesis, // (
+    Newline, // \n .. our expression delimiter, in place of ;
+
+    OpenParenthesis,  // (
     CloseParenthesis, // )
-    OpenCurlyBrace, // {
-    CloseCurlyBrace, // }
-    OpenBracket, // [
-    CloseBracket, // ]
-    Comma, // ,
-    Eof, // end of file.
-    
+    OpenCurlyBrace,   // {
+    CloseCurlyBrace,  // }
+    OpenBracket,      // [
+    CloseBracket,     // ]
+    Comma,            // ,
+    Eof,              // end of file.
+
     // KEYWORDS
-    If, // if comparison {...}
-    Else, // else || else comparison {...}
+    If,     // if comparison {...}
+    Else,   // else || else comparison {...}
     Repeat, // repeat {..} || repeat ID comparison {..} // if ID doesnt exist its implied to be 0.
     Return, // return expr
-    Struct, // struct TypeName | field_decl ... | 
-    New, // new Typename() || new Typename{}
+    Struct, // struct TypeName | field_decl ... |
+    New,    // new Typename() || new Typename{}
     Within, // within TypeName {.. function declarations ..}
-    Const, // const varname : Type = value || const func : fn() {..} || const v := 100
-    Var, // var varname : Type = value || var func : fn() {..} || var v := 100
+    Const,  // const varname : Type = value || const func : fn() {..} || const v := 100
+    Var,    // var varname : Type = value || var func : fn() {..} || var v := 100
 }
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -183,7 +175,7 @@ impl TokenProcessor for Tokenizer {
             let mut size_at_last_newline = 0;
             if current == '\'' || current == '\"' {
                 let start = current;
-                
+
                 let mut string = String::new();
                 loop {
                     if current == '\n' || current == '\r' {

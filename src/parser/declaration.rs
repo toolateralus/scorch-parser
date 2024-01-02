@@ -1,9 +1,12 @@
 // declarations
 
-use crate::{lexer::{Token, TokenFamily, TokenKind}, ast::Node};
+use crate::{
+    ast::Node,
+    lexer::{Token, TokenFamily, TokenKind},
+};
 
-use super::{*, expression::parse_expression};
 use super::super::*;
+use super::{expression::parse_expression, *};
 
 pub fn parse_type_assoc_decl_block(
     index: &mut usize,
@@ -12,7 +15,7 @@ pub fn parse_type_assoc_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
-		*index += 1;
+        *index += 1;
 
         let mutable = if token.family == TokenFamily::Keyword && token.kind == TokenKind::Var {
             consume_newlines(index, tokens);
@@ -25,22 +28,25 @@ pub fn parse_type_assoc_decl_block(
             break;
         }
 
-        match parse_decl(token, index, tokens, mutable) {
+        match parse_decl_stmnt(token, index, tokens, mutable) {
             Ok(node) => {
                 let is_valid = match node {
                     Node::FnDeclStmnt { .. } => true,
                     _ => false,
                 };
-                
+
                 if !is_valid {
                     panic!("Expected function declaration statement in associated block, got {:?}, \n\n from : {:?}", node, statements);
                 }
 
                 statements.push(Box::new(node))
             }
-            Err(inner_err) => panic!("type assoc decl block err: invalid declaration\ninner err:\n{:#?}", inner_err),
+            Err(inner_err) => panic!(
+                "type assoc decl block err: invalid declaration\ninner err:\n{:#?}",
+                inner_err
+            ),
         }
-
+        
         token = get_current(tokens, index);
 
         if token.kind == TokenKind::Comma || token.kind == TokenKind::Newline {
@@ -56,22 +62,25 @@ pub fn parse_struct_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
-		*index += 1;
-		
-		if token.kind == TokenKind::Pipe {
-			break;
-		}
-        
+        *index += 1;
+
+        if token.kind == TokenKind::Pipe {
+            break;
+        }
+
         let mutable = if token.kind == TokenKind::Var {
             token = consume_newlines(index, tokens);
             true
         } else {
             false
         };
-        
-        match parse_decl(token, index, tokens, mutable) {
+
+        match parse_decl_stmnt(token, index, tokens, mutable) {
             Ok(node) => statements.push(Box::new(node)),
-            Err(inner_err) => panic!("struct decl block err: invalid declaration\ninner err:\n{:#?}", inner_err),
+            Err(inner_err) => panic!(
+                "struct decl block err: invalid declaration\ninner err:\n{:#?}",
+                inner_err
+            ),
         }
 
         token = get_current(tokens, index);
@@ -82,17 +91,16 @@ pub fn parse_struct_decl_block(
     }
 }
 
-pub fn parse_decl(
+pub fn parse_decl_stmnt(
     token: &Token,
     index: &mut usize,
     tokens: &Vec<Token>,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-   
     let id = token.value.clone();
-    
+
     let operator = get_current(tokens, index);
-    
+
     match operator.kind {
         // varname := default;
         // declaring a variable with implicit type.
@@ -115,7 +123,7 @@ pub fn parse_decl(
             let access = parse_array_access(index, tokens, token.value.as_str());
             access
         }
-        
+
         // function call
         TokenKind::OpenParenthesis => {
             let Some(node) = parse_fn_call(index, tokens, &token.value.clone()) else {
@@ -124,19 +132,19 @@ pub fn parse_decl(
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
-					inner_err: None
+                    inner_err: None,
                 });
             };
             node
         }
-        
+
         _ => {
-            return Err(PrsErr{
+            return Err(PrsErr {
                 message: dbgmsg!("decl err: invalid operator"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-				inner_err: None
+                inner_err: None,
             });
         }
     }
@@ -149,7 +157,7 @@ pub fn parse_implicit_decl(
     mutable: bool,
 ) -> Result<Node, PrsErr> {
     *index += 1;
-    
+
     if get_current(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
     }
@@ -158,7 +166,7 @@ pub fn parse_implicit_decl(
     let value = parse_expression(tokens, index)?;
 
     consume_normal_expr_delimiter(tokens, index);
-    
+
     Ok(Node::DeclStmt {
         target_type: String::from("dynamic"),
         id: id.clone(),
@@ -174,37 +182,31 @@ pub fn parse_explicit_decl(
     id: String,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    // skip id token
-    *index += 1;
+    consume_next_if_type(tokens, index, TokenKind::Colon);
 
-    // varname :^ type = default;
-    // todo: check for valid type / builtins
-    let target_type_tkn = get_current(tokens, index);
-    let target_type = target_type_tkn.value.clone();
-    
-    *index += 1;
-    
+    let type_token = get_current(tokens, index);
+    let target_t = type_token.value.clone();
+
+    consume_next_if_type(tokens, index, TokenKind::Identifier);
+
     let token = get_current(tokens, index);
+
     if token.kind == TokenKind::OpenParenthesis {
-        let return_type = target_type;
+        consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
+
+        let return_type = target_t.to_string();
         let params = parse_parameters(tokens, index)?; //(x : int..)..
-        let Some(val) = parse_fn_decl(
-            &params,
-            tokens,
-            index,
-            &id,
-            return_type.to_string(),
-            mutable,
-        ) else {
-            return Err(PrsErr{
+
+        let Some(val) = parse_fn_decl(&params, tokens, index, &id, return_type, mutable) else {
+            return Err(PrsErr {
                 message: dbgmsg!("Expected function body"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-                inner_err: None
+                inner_err: None,
             });
         };
-        
+
         let fn_def = match &val {
             Ok(fn_def) => fn_def,
             Err(_inner_err) => {
@@ -217,15 +219,12 @@ pub fn parse_explicit_decl(
                 });
             }
         };
-            
-        // consume body end?        
-        *index += 1;
-            
+
         return Ok(fn_def.clone());
     }
-    
+
     // varname : type^ = default;
-    
+
     let token = get_current(tokens, index);
 
     // varname : type
@@ -233,10 +232,10 @@ pub fn parse_explicit_decl(
     if token.kind == TokenKind::Newline {
         *index += 1;
 
-        let default_value_expression = create_default_value_for_type(&target_type, mutable)?;
+        let default_value_expression = create_default_value_for_type(&target_t, mutable)?;
 
         return Ok(Node::DeclStmt {
-            target_type,
+            target_type: target_t,
             id,
             expression: Box::new(default_value_expression),
             mutable,
@@ -250,19 +249,16 @@ pub fn parse_explicit_decl(
     let expression = parse_expression(tokens, index)?;
     consume_normal_expr_delimiter(tokens, index);
     Ok(Node::DeclStmt {
-        target_type,
+        target_type: target_t,
         id,
         expression: Box::new(expression),
         mutable,
     })
 }
 
-pub fn parse_type_assoc_block(
-    index: &mut usize,
-    tokens: &Vec<Token>,
-) -> Result<Node, PrsErr> {
+pub fn parse_type_assoc_block(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     consume_next_if_type(tokens, index, TokenKind::Within);
-	let typename = get_current(tokens, index);
+    let typename = get_current(tokens, index);
     consume_next_if_type(tokens, index, TokenKind::Identifier);
     consume_next_if_type(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
@@ -278,18 +274,19 @@ pub fn parse_struct_decl(
     identifier: &Token,
     tokens: &Vec<Token>,
 ) -> Result<Node, PrsErr> {
-    *index += 2; // consume 'struct && identifier'
+    consume_next_if_type(tokens, index, TokenKind::Struct);
+    consume_next_if_type(tokens, index, TokenKind::Identifier);
 
     let id = identifier.value.clone();
     let mut token = get_current(tokens, index);
 
     if token.kind != TokenKind::Pipe {
-        return Err(PrsErr{
+        return Err(PrsErr {
             message: dbgmsg!("Expected pipe token after struct identifier"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
-			inner_err: None
+            inner_err: None,
         });
     }
 
@@ -300,7 +297,9 @@ pub fn parse_struct_decl(
     if token.kind == TokenKind::Pipe {
         *index += 1;
     }
+
     parse_struct_decl_block(index, tokens, &mut statements);
+
     Ok(Node::StructDecl {
         id,
         block: Box::new(Node::Block(statements)),

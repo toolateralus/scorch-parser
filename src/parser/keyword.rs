@@ -1,10 +1,14 @@
-use super::*;
 use super::super::*;
-use super::declaration::{parse_decl, parse_type_assoc_block, parse_struct_decl};
+use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
 use super::expression::parse_expression;
+use super::*;
 // keywords
 
-pub fn parse_return(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+pub fn parse_return(
+    index: &mut usize,
+    second: &Token,
+    tokens: &Vec<Token>,
+) -> Result<Node, PrsErr> {
     *index += 1;
     // discard break
     match second.kind {
@@ -13,12 +17,12 @@ pub fn parse_return(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> R
             let value = parse_expression(tokens, index)?;
             Ok(Node::ReturnStmnt(Some(Box::new(value))))
         }
-        _ => Err(PrsErr{
+        _ => Err(PrsErr {
             message: dbgmsg!("break err: Unexpected token"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
-			inner_err: None
+            inner_err: None,
         }),
     }
 }
@@ -67,34 +71,34 @@ pub fn parse_keyword_ops(
         TokenKind::Const => {
             consume_next_if_type(tokens, index, TokenKind::Const);
             consume_next_if_type(tokens, index, TokenKind::Identifier);
-            parse_decl(next_token, index, tokens, false)
-        },
+            parse_decl_stmnt(next_token, index, tokens, false)
+        }
         TokenKind::Var => {
             consume_next_if_type(tokens, index, TokenKind::Var);
             consume_next_if_type(tokens, index, TokenKind::Identifier);
-            parse_decl(next_token, index, tokens, true)
+            parse_decl_stmnt(next_token, index, tokens, true)
         }
         TokenKind::Return => parse_return(index, next_token, tokens),
         TokenKind::Repeat => parse_repeat_stmnt(next_token, index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
-		TokenKind::Within => parse_type_assoc_block(index, tokens),
+        TokenKind::Within => parse_type_assoc_block(index, tokens),
         TokenKind::Else => {
-            return Err(PrsErr{
+            return Err(PrsErr {
                 message: dbgmsg!("Unexpected else statement.. else must follow an if."),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-				inner_err: None
+                inner_err: None,
             });
         }
         TokenKind::Struct => parse_struct_decl(index, next_token, tokens),
         _ => {
-            return Err(PrsErr{
+            return Err(PrsErr {
                 message: dbgmsg!("unexpected token"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-				inner_err: None
+                inner_err: None,
             })
         }
     }
@@ -105,12 +109,12 @@ pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     let if_condition = parse_expression(tokens, index)?;
 
     if get_current(tokens, index).kind != TokenKind::OpenCurlyBrace {
-        return Err(PrsErr{
+        return Err(PrsErr {
             message: dbgmsg!("Expected open curly brace after if condition"),
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
-			inner_err: None
+            inner_err: None,
         });
     }
 
@@ -123,17 +127,17 @@ pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     // if, no else.
     if else_or_end.kind == TokenKind::Else {
         let else_node = match parse_else(tokens, index) {
-			Ok(else_node) => else_node,
-			Err(inner_err) => {
-				return Err(PrsErr {
-					message: dbgmsg!("Expected else statement"),
-					token: get_current(tokens, index).clone(),
-					type_: ErrType::UnexpectedToken,
-					index: *index,
-					inner_err: Some(Box::new(inner_err))
-				});
-			}
-		};
+            Ok(else_node) => else_node,
+            Err(inner_err) => {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected else statement"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: Some(Box::new(inner_err)),
+                });
+            }
+        };
 
         return Ok(Node::IfStmnt {
             condition: Box::new(if_condition),

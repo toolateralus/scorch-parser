@@ -3,25 +3,33 @@ pub mod expression;
 pub mod keyword;
 pub mod literal;
 
+use crate::ast::{ARRAY_TNAME, BOOL_TNAME, DOUBLE_TNAME, INT_TNAME, STRING_TNAME};
 use rand::Rng;
-use crate::ast::{BOOL_TNAME, DOUBLE_TNAME, STRING_TNAME, ARRAY_TNAME, INT_TNAME};
 
-use self::{expression::{parse_operand, parse_expression}, keyword::parse_keyword_ops, declaration::parse_decl};
+use self::{
+    declaration::parse_decl_stmnt,
+    expression::{parse_expression, parse_operand},
+    keyword::parse_keyword_ops,
+};
 
+use super::*;
 use super::{
     ast::Node,
     lexer::{Token, TokenFamily, TokenKind},
 };
-use super::*;
 #[macro_export]
 #[cfg(debug_assertions)]
 macro_rules! dbgmsg {
-	($msg:expr) => {format!(" [{}:{}] {}", file!(), line!(), $msg)};
+    ($msg:expr) => {
+        format!(" [{}:{}] {}", file!(), line!(), $msg)
+    };
 }
 #[macro_export]
 #[cfg(not(debug_assertions))]
 macro_rules! dbgmsg {
-	($msg:expr) => {format!("{}", $msg)};
+    ($msg:expr) => {
+        format!("{}", $msg)
+    };
 }
 
 #[derive(Debug)]
@@ -35,13 +43,11 @@ pub struct PrsErr {
     pub token: Token,
     pub type_: ErrType,
     pub index: usize,
-	pub inner_err: Option<Box<PrsErr>>
+    pub inner_err: Option<Box<PrsErr>>,
 }
 
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
-    *index += 1; // discard open_paren
-
     let mut params = Vec::new();
 
     loop {
@@ -55,12 +61,12 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         // parsing varname
         // ^varname: Typename
         if token.family != TokenFamily::Identifier {
-            Err(PrsErr{
+            Err(PrsErr {
                 message: dbgmsg!("parameter err: expected identifier"),
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-				inner_err: None
+                inner_err: None,
             })?;
         }
 
@@ -85,12 +91,14 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
                 *index += 1;
             }
             _ => {
-                return Err(PrsErr{
-                    message: dbgmsg!("Expected colon token after variable name in parameter declaration"),
+                return Err(PrsErr {
+                    message: dbgmsg!(
+                        "Expected colon token after variable name in parameter declaration"
+                    ),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
-					inner_err: None
+                    inner_err: None,
                 });
             }
         }
@@ -149,17 +157,17 @@ pub fn parse_fn_decl(
     let kind = token.kind;
     if kind == TokenKind::OpenCurlyBrace {
         let body = match parse_block(tokens, index) {
-			Ok(body) => body,
-			Err(inner_err) => {
-				return Some(Err(PrsErr {
-					message: dbgmsg!("fn decl err: invalid block"),
-					token: get_current(tokens, index).clone(),
-					type_: ErrType::UnexpectedToken,
-					index: *index,
-					inner_err: Some(Box::new(inner_err))
-				}));
-			}
-		};
+            Ok(body) => body,
+            Err(inner_err) => {
+                return Some(Err(PrsErr {
+                    message: dbgmsg!("fn decl err: invalid block"),
+                    token: get_current(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: Some(Box::new(inner_err)),
+                }));
+            }
+        };
 
         let node = Node::FnDeclStmnt {
             id: id.clone(),
@@ -185,7 +193,7 @@ pub fn parse_fn_call(
                 token: get_current(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-                inner_err: Some(Box::new(inner_err))
+                inner_err: Some(Box::new(inner_err)),
             }));
         }
     };
@@ -209,7 +217,7 @@ pub fn create_default_value_for_type(target_type: &String, mutable: bool) -> Res
             let elements_mutable = mutable;
             let arr = new_array(typename, init_capacity, elements, mutable, elements_mutable);
             Node::Expression(Box::new(arr))
-        },
+        }
         INT_TNAME => Node::Expression(Box::new(Node::Int(0))),
         _ => Node::Expression(Box::new(Node::Undefined())),
     };
@@ -282,24 +290,25 @@ pub fn new_array(
     }
 }
 
-
 pub fn parse_array_access(
     index: &mut usize,
     tokens: &Vec<Token>,
     id: &str,
 ) -> Result<Node, PrsErr> {
     let accessor = match parse_expression(tokens, index) {
-		Ok(accessor) => accessor,
-		Err(inner_err) => {
-			return Err(PrsErr {
-				message: dbgmsg!( "invalid expression in array subscript accessor, ie [...this expression..]"),
-				token: get_current(tokens, index).clone(),
-				type_: ErrType::UnexpectedToken,
-				index: *index,
-				inner_err: Some(Box::new(inner_err))
-			});
-		}
-	};
+        Ok(accessor) => accessor,
+        Err(inner_err) => {
+            return Err(PrsErr {
+                message: dbgmsg!(
+                    "invalid expression in array subscript accessor, ie [...this expression..]"
+                ),
+                token: get_current(tokens, index).clone(),
+                type_: ErrType::UnexpectedToken,
+                index: *index,
+                inner_err: Some(Box::new(inner_err)),
+            });
+        }
+    };
 
     let mut token = consume_newlines(index, tokens);
 
@@ -330,17 +339,17 @@ pub fn parse_array_access(
             } = node
             {
                 let expression = match parse_expression(tokens, index) {
-					Ok(expression) => expression,
-					Err(inner_err) => {
-						return Err(PrsErr {
+                    Ok(expression) => expression,
+                    Err(inner_err) => {
+                        return Err(PrsErr {
 							message: dbgmsg!("invalid expression in array subscript accessor, ie [...this expression..]"),
 							token: get_current(tokens, index).clone(),
 							type_: ErrType::UnexpectedToken,
 							index : *index,
 							inner_err: Some(Box::new(inner_err))
 						});
-					}
-				};
+                    }
+                };
 
                 node = Node::ArrayAccessExpr {
                     id,
@@ -356,11 +365,10 @@ pub fn parse_array_access(
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedToken,
             index: *index,
-			inner_err: None
+            inner_err: None,
         }),
     }
 }
-
 
 pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     let mut index = 0;
@@ -382,12 +390,12 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
                 if token.kind == TokenKind::Newline || token.kind == TokenKind::Eof {
                     break; // ignore newlines.
                 }
-                return Err(PrsErr{
+                return Err(PrsErr {
                     message: dbgmsg!("program err: invalid statement"),
                     token: get_current(tokens, &mut index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index,
-					inner_err: Some(Box::new(inner_err))
+                    inner_err: Some(Box::new(inner_err)),
                 });
             }
         }
@@ -413,12 +421,12 @@ pub fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
                 if token.kind == TokenKind::Newline || token.kind == TokenKind::Eof {
                     break; // ignore newlines.
                 }
-                return Err(PrsErr{
+                return Err(PrsErr {
                     message: dbgmsg!("block err: invalid statement"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
-					inner_err: Some(Box::new(inner_err))
+                    inner_err: Some(Box::new(inner_err)),
                 });
             }
         }
@@ -432,74 +440,70 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
             token: get_current(tokens, index).clone(),
             type_: ErrType::UnexpectedEof,
             index: *index,
-			inner_err: None
+            inner_err: None,
         }));
     }
-    
+
     let first = consume_newlines(index, tokens);
-    
+
     if *index + 1 >= tokens.len() {
         return None;
         // newline, eof.
         // this is old but should never get called, if it does we have some work to do on it.
     }
-    
+
     let second = tokens.get(*index + 1).unwrap();
 
     match first.family {
         TokenFamily::Keyword => Some(parse_keyword_ops(first, index, second, tokens)),
-        
+
         TokenFamily::Operator | TokenFamily::Value | TokenFamily::Identifier => {
-			let left = match parse_expression(tokens, index) {
-				Ok(node) => node,
-				Err(inner_err) => {
-					return Some(Err(PrsErr {
-						message:  dbgmsg!("statement err: left side could not parse"),
-						token: get_current(tokens, index).clone(),
-						type_: ErrType::UnexpectedToken,
-						index: *index,
-						inner_err: Some(Box::new(inner_err))
-					}));
-				}
-			};
-			return match get_current(tokens, index).kind {
-				TokenKind::ColonEquals | TokenKind::Colon => {
-					let decl = parse_decl(first, index, tokens, false);
-					Some(decl)
-				}
-				TokenKind::Assignment => {
-					consume_next_if_type(tokens, index, TokenKind::Assignment);
-					let expression = match parse_expression(tokens, index) {
-						Ok(node) => node,
-						Err(inner_err) => {
-							return Some(Err(PrsErr {
-								message: dbgmsg!("statement err: right side could not parse"),
-								token: get_current(tokens, index).clone(),
-								type_: ErrType::UnexpectedToken,
-								index: *index,
-								inner_err: Some(Box::new(inner_err))
-							}));
-						}
-					};
-					consume_normal_expr_delimiter(tokens, index);
-					Some(Ok(Node::AssignStmnt {
-						id: Box::new(left),
-						expression: Box::new(expression),
-					}))
-				}
-				_ => Some(Ok(left)),
-			};
-		},
-        _ => {
-            Some(Err(PrsErr{
-                message: dbgmsg!("statement err: unexpected token"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-				inner_err: None
-            }))
+            let left = match parse_expression(tokens, index) {
+                Ok(node) => node,
+                Err(inner_err) => {
+                    return Some(Err(PrsErr {
+                        message: dbgmsg!("statement err: left side could not parse"),
+                        token: get_current(tokens, index).clone(),
+                        type_: ErrType::UnexpectedToken,
+                        index: *index,
+                        inner_err: Some(Box::new(inner_err)),
+                    }));
+                }
+            };
+            return match get_current(tokens, index).kind {
+                TokenKind::ColonEquals | TokenKind::Colon => {
+                    let decl = parse_decl_stmnt(first, index, tokens, false);
+                    Some(decl)
+                }
+                TokenKind::Assignment => {
+                    consume_next_if_type(tokens, index, TokenKind::Assignment);
+                    let expression = match parse_expression(tokens, index) {
+                        Ok(node) => node,
+                        Err(inner_err) => {
+                            return Some(Err(PrsErr {
+                                message: dbgmsg!("statement err: right side could not parse"),
+                                token: get_current(tokens, index).clone(),
+                                type_: ErrType::UnexpectedToken,
+                                index: *index,
+                                inner_err: Some(Box::new(inner_err)),
+                            }));
+                        }
+                    };
+                    consume_normal_expr_delimiter(tokens, index);
+                    Some(Ok(Node::AssignStmnt {
+                        id: Box::new(left),
+                        expression: Box::new(expression),
+                    }))
+                }
+                _ => Some(Ok(left)),
+            };
         }
+        _ => Some(Err(PrsErr {
+            message: dbgmsg!("statement err: unexpected token"),
+            token: get_current(tokens, index).clone(),
+            type_: ErrType::UnexpectedToken,
+            index: *index,
+            inner_err: None,
+        })),
     }
 }
-
-

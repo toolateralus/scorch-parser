@@ -165,7 +165,10 @@ impl Node {
             Node::Bool(..) => visitor.visit_bool(self),
             Node::Int(..) => visitor.visit_number(self),
             Node::Double(..) => visitor.visit_number(self),
-            Node::ParamDeclNode { varname: _, typename: _ } => {
+            Node::ParamDeclNode {
+                varname: _,
+                typename: _,
+            } => {
                 panic!("this is not implemented")
             }
             Node::Program(..) => visitor.visit_program(self),
@@ -181,7 +184,7 @@ impl Node {
             Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
             Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
-            
+
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
             Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
