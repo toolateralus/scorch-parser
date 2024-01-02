@@ -89,7 +89,7 @@ pub fn parse_arguments(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Nod
     *index += 1; // discard open_paren
 
     let mut args = Vec::new();
-
+    
     loop {
         let token = current_token(tokens, index);
         // paramless.

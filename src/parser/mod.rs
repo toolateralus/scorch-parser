@@ -224,3 +224,10 @@ pub fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: To
     }
     *index += 1;
 }
+pub fn consume_next_if_any(tokens: &Vec<Token>, index: &mut usize, vec: Vec<TokenKind>) {
+    let current = current_token(tokens, index);
+    if !vec.contains(&current.kind) {
+        panic!("Expected {:?}, got {:?}", vec, current.kind);
+    }
+    *index += 1;
+}

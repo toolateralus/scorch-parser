@@ -182,7 +182,7 @@ pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
 pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let left = parse_operand(tokens, index)?;
     let op = current_token(tokens, index);
-
+    
     match op.kind {
         TokenKind::OpenParenthesis => {
             if let Node::Identifier(id) = &left {
@@ -225,28 +225,13 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
         // todo: make these all safer.
         TokenKind::Number => parse_digits(identifier),
         TokenKind::Bool => Ok(Node::Bool(identifier.value.parse::<bool>().unwrap())),
-
+        
         TokenKind::Identifier => Ok(Node::Identifier(identifier.value.clone())),
         TokenKind::New => {
-            let token = current_token(tokens, index);
-            assert_eq!(
-                token.kind,
-                TokenKind::Identifier,
-                "Expected identifier token, instead got {:?}",
-                token
-            );
-
-            let structname = token.clone();
-            *index += 1;
-
-            let token = current_token(tokens, index);
-            assert!(
-                token.kind == TokenKind::OpenCurlyBrace || token.kind == TokenKind::OpenParenthesis,
-                "Expected open curly brace token"
-            );
-            *index += 1;
-
-            parse_struct_init(tokens, index, &structname)
+            let struct_name = current_token(tokens, index).clone();
+            consume_next_if_type(tokens, index, TokenKind::Identifier);
+            consume_next_if_any(tokens, index, vec![TokenKind::OpenParenthesis, TokenKind::OpenCurlyBrace]);
+            parse_struct_init(tokens, index, &struct_name)
         }
         TokenKind::String => Ok(Node::String(identifier.value.clone())),
         TokenKind::OpenBracket => {
@@ -264,7 +249,7 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             consume_next_if_type(tokens, index, TokenKind::CloseParenthesis);
             Ok(node)
         }
-
+        
         TokenKind::Repeat => parse_repeat_stmnt(current_token(tokens, index), index, tokens),
         _ => Err(PrsErr {
             message: dbgmsg!("operand err: Unexpected token"),
@@ -275,3 +260,5 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
         }),
     }
 }
+
+
