@@ -195,36 +195,25 @@ pub fn parse_explicit_decl(
         consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
 
         let return_type = target_t.to_string();
-        let params = parse_parameters(tokens, index)?; //(x : int..)..
-
-        let Some(val) = parse_fn_decl(&params, tokens, index, &id, return_type, mutable) else {
-            return Err(PrsErr {
-                message: dbgmsg!("Expected function body"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-                inner_err: None,
-            });
-        };
-
-        let fn_def = match &val {
-            Ok(fn_def) => fn_def,
-            Err(_inner_err) => {
-                return Err(PrsErr{
-                    message: dbgmsg!("explicit decl err: Expected function body (INNER EXCEPTION HIDDEN DUE TO OWNERSHIP ISSUES)"),
+        let params = parse_parameters(tokens, index)?;
+        
+        let Some(Ok(val)) = parse_fn_decl(&params, tokens, index, &id, return_type, mutable) else {
+            return Err(
+                PrsErr {
+                    message: dbgmsg!("decl err: Expected function declaration"),
                     token: get_current(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
-                });
-            }
+                }
+            )
         };
-
-        return Ok(fn_def.clone());
+    
+        return Ok(val.clone());
     }
-
+    
     // varname : type^ = default;
-
+    
     let token = get_current(tokens, index);
 
     // varname : type
