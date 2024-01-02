@@ -4,7 +4,6 @@ use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_b
 use super::expression::parse_expression;
 use super::*;
 use super::function::{parse_fn_decl, parse_parameters};
-use super::function::{parse_fn_decl, parse_parameters};
 // keywords
 
 pub fn parse_return(
