@@ -200,6 +200,7 @@ impl Node {
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
             Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
+            Node::OpOverrideDecl { op, func } => visitor.visit_op_ovr_decl(self),
         }
     }
 }
