@@ -3,6 +3,7 @@ use super::debug::{ErrType, PrsErr};
 use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
 use super::expression::parse_expression;
 use super::*;
+use super::function::{parse_fn_decl, parse_parameters};
 // keywords
 
 pub fn parse_return(
@@ -69,6 +70,45 @@ pub fn parse_keyword_ops(
     tokens: &Vec<Token>,
 ) -> Result<Node, PrsErr> {
     match keyword.kind {
+        TokenKind::Override => {
+            consume_next_if_type(tokens, index, TokenKind::Override);
+            consume_next_if_type(tokens, index, TokenKind::OpenBracket);
+            
+            let fam = current_token(tokens, index).family;
+            
+            if fam != TokenFamily::Operator {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected operator in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            }
+            
+            let op = current_token(tokens, index).clone();
+            
+            consume_next_if_type(tokens, index, TokenKind::Colon);
+            
+            consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
+            
+            let params = parse_parameters(tokens, index)?;
+            
+            let Some(Ok(func)) = parse_fn_decl(&params, tokens, index, &String::from("op_overload"), DYNAMIC_TNAME.to_string(), false) else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected function declaration in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
+            Ok(Node::OpOverrideDecl {
+                op: op.kind,
+                func:Box::new(func),
+            })
+        }
         TokenKind::Const => {
             consume_next_if_type(tokens, index, TokenKind::Const);
             consume_next_if_type(tokens, index, TokenKind::Identifier);
