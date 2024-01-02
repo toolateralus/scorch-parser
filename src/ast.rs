@@ -150,7 +150,13 @@ pub enum Node {
         typename: String,
         block: Box<Node>,
     },
-    OpOverrideDecl { op: TokenKind, func: Box<Node> },
+    OpOverrideDecl { 
+        op: TokenKind, func: Box<Node>,
+        lhs_tname: String,
+        lhs_varname: String,
+        rhs_tname: String,
+        rhs_varname: String 
+    },
 }
 impl Node {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
@@ -193,7 +199,7 @@ impl Node {
 
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
-            Node::OpOverrideDecl { op, func } => visitor.visit_op_ovr_decl(self),
+            Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
         }
     }
 }

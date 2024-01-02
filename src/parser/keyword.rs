@@ -94,6 +94,83 @@ pub fn parse_keyword_ops(
             
             let params = parse_parameters(tokens, index)?;
             
+            if params.len() != 2 {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected two parameters in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            }
+            
+            let lhs_t = params[0].clone();
+            
+            let Node::ParamDeclNode { varname, typename } = lhs_t else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected parameter declaration in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            let (lhs_t, lhs_n) = (varname, typename);
+            
+            let Node::Identifier(lhs_typename) = lhs_t.as_ref() else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
+            let Node::Identifier(lhs_varname) = lhs_n.as_ref() else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
+            let rhs_t = params[1].clone();
+            
+            let Node::ParamDeclNode { varname, typename } = rhs_t else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected parameter declaration in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
+            let (rhs_t, rhs_n) = (varname, typename);
+            
+            let Node::Identifier(rhs_typename) = rhs_t.as_ref() else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
+            let Node::Identifier(rhs_varname) = rhs_n.as_ref() else {
+                return Err(PrsErr {
+                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    token: current_token(tokens, index).clone(),
+                    type_: ErrType::UnexpectedToken,
+                    index: *index,
+                    inner_err: None,
+                });
+            };
+            
             let Some(Ok(func)) = parse_fn_decl(&params, tokens, index, &String::from("op_overload"), DYNAMIC_TNAME.to_string(), false) else {
                 return Err(PrsErr {
                     message: dbgmsg!("Expected function declaration in operator overload function definition"),
@@ -107,6 +184,10 @@ pub fn parse_keyword_ops(
             Ok(Node::OpOverrideDecl {
                 op: op.kind,
                 func:Box::new(func),
+                lhs_tname: lhs_typename.clone(),
+                lhs_varname: lhs_varname.clone(),
+                rhs_tname: rhs_typename.clone(),
+                rhs_varname: rhs_varname.clone(),
             })
         }
         TokenKind::Const => {
