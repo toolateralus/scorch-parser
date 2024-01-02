@@ -512,7 +512,7 @@ fn parse_decl(
     tokens: &Vec<Token>,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    // varname : type = default;
+   
     let id = token.value.clone();
     
     let operator = get_current(tokens, index);
@@ -803,7 +803,7 @@ fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<Node
 					Some(decl)
 				}
 				TokenKind::Assignment => {
-					*index += 1;
+					consume_next_if_type(tokens, index, TokenKind::Assignment);
 					let expression = match parse_expression(tokens, index) {
 						Ok(node) => node,
 						Err(inner_err) => {
@@ -859,8 +859,16 @@ fn parse_keyword_ops(
     tokens: &Vec<Token>,
 ) -> Result<Node, PrsErr> {
     match keyword.kind {
-        TokenKind::Const => parse_const(index, next_token, tokens, keyword),
-        TokenKind::Var => parse_var(index, next_token, tokens, keyword),
+        TokenKind::Const => {
+            consume_next_if_type(tokens, index, TokenKind::Const);
+            consume_next_if_type(tokens, index, TokenKind::Identifier);
+            parse_decl(next_token, index, tokens, false)
+        },
+        TokenKind::Var => {
+            consume_next_if_type(tokens, index, TokenKind::Var);
+            consume_next_if_type(tokens, index, TokenKind::Identifier);
+            parse_decl(next_token, index, tokens, true)
+        }
         TokenKind::Return => parse_return(index, next_token, tokens),
         TokenKind::Repeat => parse_repeat_stmnt(next_token, index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
@@ -994,25 +1002,6 @@ fn parse_struct_decl_block(
         }
     }
 }
-fn parse_var(
-    index: &mut usize,
-    second: &Token,
-    tokens: &Vec<Token>,
-    _first: &Token,
-) -> Result<Node, PrsErr> {
-    // consume 'var' and identifier
-    *index += 2;
-    parse_decl(second, index, tokens, true).map_err(|inner_err| {
-        PrsErr{
-            message: dbgmsg!("var: Expected declaration statement"),
-            token: get_current(tokens, index).clone(),
-            type_: ErrType::UnexpectedToken,
-            index: *index,
-			inner_err: Some(Box::new(inner_err))
-        }
-    })
-}
-
 fn parse_return(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     *index += 1;
     // discard break
@@ -1029,28 +1018,6 @@ fn parse_return(index: &mut usize, second: &Token, tokens: &Vec<Token>) -> Resul
             index: *index,
 			inner_err: None
         }),
-    }
-}
-fn parse_const(
-    index: &mut usize,
-    second: &Token,
-    tokens: &Vec<Token>,
-    _first: &Token,
-) -> Result<Node, PrsErr> {
-    // consume 'const'
-    *index += 1;
-    let varname = second;
-    match parse_decl(varname, index, tokens, false) {
-        Ok(node) => Ok(node),
-        Err(inner_err) => {
-            Err(PrsErr{
-                message: dbgmsg!("Expected declaration statement"),
-                token: get_current(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-				inner_err: Some(Box::new(inner_err))
-            })
-        }
     }
 }
 fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
