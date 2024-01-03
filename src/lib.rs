@@ -35,8 +35,6 @@ mod tests {
         
         let ast_root = expression::parse_program(&tokenizer.tokens);
         
-        panic!("AST ROOT: {:#?}", &ast_root);
-        
         match ast_root {
             Ok(_) => {}
             Err(err) => panic!("{:#?}", err),
