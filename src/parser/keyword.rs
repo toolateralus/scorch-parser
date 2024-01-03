@@ -1,14 +1,11 @@
 use super::super::*;
 use super::debug::{ErrType, PrsErr};
 use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
-use super::expression::{parse_expression, parse_operand, parse_block};
+use super::expression::{parse_block, parse_expression, parse_operand};
 use super::*;
 // keywords
 
-pub fn parse_return(
-    index: &mut usize,
-    tokens: &Vec<Token>,
-) -> Result<Node, PrsErr> {
+pub fn parse_return(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     let second = current_token(tokens, index);
     consume(tokens, index, TokenKind::Return);
     match second.kind {
@@ -27,12 +24,9 @@ pub fn parse_return(
     }
 }
 
-pub fn parse_repeat_stmnt(
-    index: &mut usize,
-    tokens: &Vec<Token>,
-) -> Result<Node, PrsErr> {
+pub fn parse_repeat_stmnt(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     let next = current_token(tokens, index);
-    
+
     if next.family == TokenFamily::Identifier {
         let id = Box::new(parse_operand(tokens, index)?);
         consume(tokens, index, TokenKind::Repeat);
@@ -45,10 +39,10 @@ pub fn parse_repeat_stmnt(
         };
         return Ok(node);
     }
-    
+
     consume(tokens, index, TokenKind::Repeat);
     let block = parse_block(tokens, index)?;
-    
+
     Ok(Node::RepeatStmnt {
         id: None,
         condition: None,

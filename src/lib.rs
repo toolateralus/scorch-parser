@@ -1,11 +1,11 @@
-use std::{fs::File, io::Read};
 use lexer::{create_tokenizer, TokenProcessor};
+use std::{fs::File, io::Read};
 
 use crate::parser::expression;
 pub mod ast;
 pub mod lexer;
 pub mod parser;
-fn main () {
+fn main() {
     let mut file = File::open("src/tests.scorch").expect("Failed to open file");
     let mut input = String::new();
     file.read_to_string(&mut input)

@@ -74,14 +74,14 @@ pub enum Node {
         op: TokenKind,
         rhs: Box<Node>,
     },
-    
+
     // todo: do the same with Unary operations :
     // we can have a special noed for these instead of
     // weaving it in with factors.
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
     ReturnStmnt(Option<Box<Node>>),
-    
+
     Expression(Box<Node>),
     // Statements
     AssignStmnt {
@@ -153,19 +153,19 @@ impl Node {
             Node::Bool(..) => visitor.visit_bool(self),
             Node::Identifier(..) => visitor.visit_identifier(self),
             Node::String(..) => visitor.visit_string(self),
-            
+
             Node::Program(..) => visitor.visit_program(self),
             Node::Block(..) => visitor.visit_block(self),
             Node::Expression(..) => visitor.visit_expression(self),
             Node::Array { .. } => visitor.visit_array(self),
-            
+
             // declarations
-            Node::ParamDecl {..} => visitor.visit_parameter(self),
+            Node::ParamDecl { .. } => visitor.visit_parameter(self),
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
             Node::FuncDeclStmnt { .. } => visitor.visit_function_decl(self),
             Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
-            
+
             // todo: make a blanket node for statements.
             Node::TypeAssocBlockStmnt { .. } => visitor.visit_type_assoc_block(self),
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
@@ -173,11 +173,11 @@ impl Node {
             Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
             Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
-            
+
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
             Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
-            
+
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
             Node::Tuple(..) => visitor.visit_tuple(self),

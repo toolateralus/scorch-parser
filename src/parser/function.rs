@@ -9,12 +9,12 @@ use crate::{
 use super::{
     consume, current_token,
     debug::*,
-    expression::{parse_expression, parse_operand, parse_block},
+    expression::{parse_block, parse_expression, parse_operand},
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
     let mut params = Vec::new();
-    
+
     loop {
         let mut token = current_token(tokens, index);
 
@@ -76,7 +76,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-        
+
         let param_decl_node = Node::ParamDecl {
             varname: Box::new(varname),
             typename: Box::new(typename),

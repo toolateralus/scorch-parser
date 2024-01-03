@@ -5,16 +5,10 @@ pub mod function;
 pub mod keyword;
 pub mod literal;
 
-use crate::ast::{ARRAY_TNAME, BOOL_TNAME, DOUBLE_TNAME, DYNAMIC_TNAME, INT_TNAME, STRING_TNAME};
+use crate::ast::{ARRAY_TNAME, DYNAMIC_TNAME};
 use rand::Rng;
 
-use self::{
-    debug::{ErrType, PrsErr},
-    declaration::parse_decl_stmnt,
-    expression::parse_expression,
-    keyword::parse_keyword_ops,
-    literal::new_array,
-};
+use self::keyword::parse_keyword_ops;
 
 use super::{
     ast::Node,
