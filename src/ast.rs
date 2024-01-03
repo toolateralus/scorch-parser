@@ -12,6 +12,7 @@ pub const DYNAMIC_TNAME: &str = "dynamic";
 pub const FN_TNAME: &str = "fn";
 
 pub trait Visitor<T> {
+    fn visit_parameter(&mut self, node: &Node) -> T;
     fn visit_number(&mut self, node: &Node) -> T;
     fn visit_term(&mut self, node: &Node) -> T;
     fn visit_factor(&mut self, node: &Node) -> T;
@@ -26,6 +27,7 @@ pub trait Visitor<T> {
     fn visit_logical_expression(&mut self, node: &Node) -> T;
     fn visit_op_ovr_decl(&mut self, node: &Node) -> T;
     // unary operations
+    fn visit_tuple(&mut self, node: &Node) -> T;
     fn visit_not_op(&mut self, node: &Node) -> T;
     fn visit_neg_op(&mut self, node: &Node) -> T;
     fn visit_assignment(&mut self, node: &Node) -> T;
@@ -72,38 +74,31 @@ pub enum Node {
         op: TokenKind,
         rhs: Box<Node>,
     },
-
+    
     // todo: do the same with Unary operations :
     // we can have a special noed for these instead of
     // weaving it in with factors.
     NegOp(Box<Node>), // for unary -
     NotOp(Box<Node>), // for unary !
     ReturnStmnt(Option<Box<Node>>),
-
+    
     Expression(Box<Node>),
     // Statements
     AssignStmnt {
         id: Box<Node>,
         expression: Box<Node>,
     },
-
-    FunctionCall {
-        id: String,
-        arguments: Option<Vec<Node>>,
-    },
-
     DeclStmt {
         target_type: String,
-        id: String,
+        id: Box<Node>,
         expression: Box<Node>,
         mutable: bool,
     },
     RepeatStmnt {
-        iterator_id: Option<String>,
+        id: Box<Node>,
         condition: Option<Box<Node>>,
         block: Box<Node>,
     },
-    // not implemented
     IfStmnt {
         condition: Box<Node>,
         block: Box<Node>,
@@ -114,95 +109,78 @@ pub enum Node {
         block: Box<Node>,
         else_stmnt: Option<Box<Node>>,
     },
-    FnDeclStmnt {
-        id: String,
+    FuncDeclStmnt {
+        id: Box<Node>,
         body: Box<Node>,
         params: Vec<Node>,
-        return_type: String,
+        return_t: Box<Node>,
         mutable: bool,
     },
-    ParamDeclNode {
+    ParamDecl {
         varname: Box<Node>,
         typename: Box<Node>,
     },
-
     Array {
-        typename: String,
+        typename: Box<Node>,
         elements: Vec<Box<Node>>,
         init_capacity: usize,
         mutable: bool,
         elements_mutable: bool,
     },
-    ArrayAccessExpr {
-        id: String,
-        index_expr: Box<Node>,
-        expression: Option<Box<Node>>,
-        assignment: bool,
-    },
-
     StructDecl {
         id: String,
         block: Box<Node>,
     },
-    StructInit {
-        id: String,
-        args: Vec<Node>,
-    },
-    TypeAssocBlock {
+    TypeAssocBlockStmnt {
         typename: String,
         block: Box<Node>,
     },
-    OpOverrideDecl { 
-        op: TokenKind, func: Box<Node>,
+    OpOverrideDecl {
+        op: TokenKind,
+        func: Box<Node>,
         lhs_tname: String,
         lhs_varname: String,
         rhs_tname: String,
-        rhs_varname: String 
+        rhs_varname: String,
     },
 }
 impl Node {
     pub fn accept<T>(&self, visitor: &mut dyn Visitor<T>) -> T {
         match self {
-            Node::TypeAssocBlock { .. } => visitor.visit_type_assoc_block(self),
-            Node::Array { .. } => visitor.visit_array(self),
-            Node::FunctionCall { .. } => visitor.visit_function_call(self),
-            Node::StructInit { .. } => visitor.visit_struct_init(self),
-            Node::ArrayAccessExpr { .. } => visitor.visit_array_access(self),
-
-            Node::Undefined() => visitor.visit_eof(self),
+            Node::Undefined() => visitor.visit_eof(self), // terminates the visit, should we do this? might want a more specific node that does this.
+            Node::Double(..) => visitor.visit_number(self),
+            Node::Int(..) => visitor.visit_number(self),
+            Node::Bool(..) => visitor.visit_bool(self),
             Node::Identifier(..) => visitor.visit_identifier(self),
             Node::String(..) => visitor.visit_string(self),
-            Node::Bool(..) => visitor.visit_bool(self),
-            Node::Int(..) => visitor.visit_number(self),
-            Node::Double(..) => visitor.visit_number(self),
-            Node::ParamDeclNode {
-                varname: _,
-                typename: _,
-            } => {
-                panic!("this is not implemented")
-            }
+            
             Node::Program(..) => visitor.visit_program(self),
             Node::Block(..) => visitor.visit_block(self),
             Node::Expression(..) => visitor.visit_expression(self),
-
+            Node::Array { .. } => visitor.visit_array(self),
+            
+            // declarations
+            Node::ParamDecl {..} => visitor.visit_parameter(self),
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
-            Node::FnDeclStmnt { .. } => visitor.visit_function_decl(self),
-
+            Node::FuncDeclStmnt { .. } => visitor.visit_function_decl(self),
+            Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
+            
+            // todo: make a blanket node for statements.
+            Node::TypeAssocBlockStmnt { .. } => visitor.visit_type_assoc_block(self),
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
             Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
             Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
             Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
-
+            
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
             Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
             
-            Node::NegOp( .. ) => visitor.visit_neg_op(self),
-            Node::NotOp( .. ) => visitor.visit_not_op(self),
-            Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
-            Node::Tuple( .. ) => todo!(),
+            Node::NegOp(..) => visitor.visit_neg_op(self),
+            Node::NotOp(..) => visitor.visit_not_op(self),
+            Node::Tuple(..) => visitor.visit_tuple(self),
         }
     }
 }

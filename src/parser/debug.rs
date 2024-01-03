@@ -15,12 +15,12 @@ macro_rules! dbgmsg {
     };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ErrType {
     UnexpectedToken,
     UnexpectedEof,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PrsErr {
     pub message: String,
     pub token: Token,

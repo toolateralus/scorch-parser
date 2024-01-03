@@ -2,8 +2,8 @@ use super::super::*;
 use super::debug::{ErrType, PrsErr};
 use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
 use super::expression::parse_expression;
+use super::function::{parse_fn_block_ret_decl_stmnt_node, parse_parameters};
 use super::*;
-use super::function::{parse_fn_decl, parse_parameters};
 // keywords
 
 pub fn parse_return(
@@ -71,11 +71,11 @@ pub fn parse_keyword_ops(
 ) -> Result<Node, PrsErr> {
     match keyword.kind {
         TokenKind::Override => {
-            consume_next_if_type(tokens, index, TokenKind::Override);
-            consume_next_if_type(tokens, index, TokenKind::OpenBracket);
-            
+            consume(tokens, index, TokenKind::Override);
+            consume(tokens, index, TokenKind::OpenBracket);
+
             let fam = current_token(tokens, index).family;
-            
+
             if fam != TokenFamily::Operator {
                 return Err(PrsErr {
                     message: dbgmsg!("Expected operator in operator overload function definition"),
@@ -85,30 +85,34 @@ pub fn parse_keyword_ops(
                     inner_err: None,
                 });
             }
-            
+
             let op = current_token(tokens, index).clone();
-            
-            consume_next_if_type(tokens, index, TokenKind::Colon);
-            
-            consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
-            
+
+            consume(tokens, index, TokenKind::Colon);
+
+            consume(tokens, index, TokenKind::OpenParenthesis);
+
             let params = parse_parameters(tokens, index)?;
-            
+
             if params.len() != 2 {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected two parameters in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected two parameters in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             }
-            
+
             let lhs_t = params[0].clone();
-            
-            let Node::ParamDeclNode { varname, typename } = lhs_t else {
+
+            let Node::ParamDecl { varname, typename } = lhs_t else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected parameter declaration in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected parameter declaration in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
@@ -116,74 +120,93 @@ pub fn parse_keyword_ops(
                 });
             };
             let (lhs_t, lhs_n) = (varname, typename);
-            
+
             let Node::Identifier(lhs_typename) = lhs_t.as_ref() else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected identifier in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
+
             let Node::Identifier(lhs_varname) = lhs_n.as_ref() else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected identifier in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
+
             let rhs_t = params[1].clone();
-            
-            let Node::ParamDeclNode { varname, typename } = rhs_t else {
+
+            let Node::ParamDecl { varname, typename } = rhs_t else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected parameter declaration in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected parameter declaration in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
+
             let (rhs_t, rhs_n) = (varname, typename);
-            
+
             let Node::Identifier(rhs_typename) = rhs_t.as_ref() else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected identifier in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
+
             let Node::Identifier(rhs_varname) = rhs_n.as_ref() else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected identifier in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected identifier in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
-            let Some(Ok(func)) = parse_fn_decl(&params, tokens, index, &String::from("op_overload"), DYNAMIC_TNAME.to_string(), false) else {
+
+            let Some(Ok(func)) = parse_fn_block_ret_decl_stmnt_node(
+                &params,
+                tokens,
+                index,
+                &String::from("op_overload"),
+                DYNAMIC_TNAME.to_string(),
+                false,
+            ) else {
                 return Err(PrsErr {
-                    message: dbgmsg!("Expected function declaration in operator overload function definition"),
+                    message: dbgmsg!(
+                        "Expected function declaration in operator overload function definition"
+                    ),
                     token: current_token(tokens, index).clone(),
                     type_: ErrType::UnexpectedToken,
                     index: *index,
                     inner_err: None,
                 });
             };
-            
+
             Ok(Node::OpOverrideDecl {
                 op: op.kind,
-                func:Box::new(func),
+                func: Box::new(func),
                 lhs_tname: lhs_typename.clone(),
                 lhs_varname: lhs_varname.clone(),
                 rhs_tname: rhs_typename.clone(),
@@ -191,13 +214,13 @@ pub fn parse_keyword_ops(
             })
         }
         TokenKind::Const => {
-            consume_next_if_type(tokens, index, TokenKind::Const);
-            consume_next_if_type(tokens, index, TokenKind::Identifier);
+            consume(tokens, index, TokenKind::Const);
+            consume(tokens, index, TokenKind::Identifier);
             parse_decl_stmnt(next_token, index, tokens, false)
         }
         TokenKind::Var => {
-            consume_next_if_type(tokens, index, TokenKind::Var);
-            consume_next_if_type(tokens, index, TokenKind::Identifier);
+            consume(tokens, index, TokenKind::Var);
+            consume(tokens, index, TokenKind::Identifier);
             parse_decl_stmnt(next_token, index, tokens, true)
         }
         TokenKind::Return => parse_return(index, next_token, tokens),

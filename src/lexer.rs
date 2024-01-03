@@ -129,7 +129,7 @@ pub enum TokenKind {
     Var,
     Override,
     Subscript,
-    Call,    // var varname : Type = value || var func : fn() {..} || var v := 100
+    Call, // var varname : Type = value || var func : fn() {..} || var v := 100
 }
 #[derive(Debug, Clone)]
 pub struct Token {

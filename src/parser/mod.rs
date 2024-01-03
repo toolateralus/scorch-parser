@@ -55,7 +55,7 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     Ok(Node::Program(statements))
 }
 pub fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    *index += 1;
+    consume(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
     while *index < tokens.len() {
         let token = consume_newlines(index, tokens);
@@ -126,7 +126,7 @@ pub fn parse_statement(tokens: &Vec<Token>, index: &mut usize) -> Option<Result<
                     Some(decl)
                 }
                 TokenKind::Assignment => {
-                    consume_next_if_type(tokens, index, TokenKind::Assignment);
+                    consume(tokens, index, TokenKind::Assignment);
                     let expression = match parse_expression(tokens, index) {
                         Ok(node) => node,
                         Err(inner_err) => {
@@ -217,7 +217,7 @@ pub fn generate_random_function_name() -> String {
         .collect();
     name
 }
-pub fn consume_next_if_type(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
+pub fn consume(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
     let current = current_token(tokens, index);
     if current.kind != expected {
         panic!("Expected {:?}, got {:?}", expected, current.kind);

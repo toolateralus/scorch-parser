@@ -7,10 +7,10 @@ use crate::{
 };
 
 use super::{
-    current_token,
+    consume, current_token,
     debug::*,
     expression::{parse_expression, parse_operand},
-    parse_block, consume_next_if_type,
+    parse_block,
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
@@ -77,8 +77,8 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-
-        let param_decl_node = Node::ParamDeclNode {
+        
+        let param_decl_node = Node::ParamDecl {
             varname: Box::new(varname),
             typename: Box::new(typename),
         };
@@ -88,10 +88,10 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
     Ok(params)
 }
 pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
-    
+    consume(tokens, index, TokenKind::OpenParenthesis);
+
     let mut args = Vec::new();
-    
+
     loop {
         let token = current_token(tokens, index);
         // empty tuple
@@ -101,18 +101,20 @@ pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
         }
         // accumulate parameter expressions
         let arg = parse_expression(tokens, index)?;
-        
+
         // skip commas
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-        
+
         args.push(Box::new(arg));
     }
-        
+
     Ok(Node::Tuple(Rc::new(args)))
 }
-pub fn parse_fn_decl(
+
+// great name
+pub fn parse_fn_block_ret_decl_stmnt_node(
     params: &Vec<Node>,
     tokens: &Vec<Token>,
     index: &mut usize,
@@ -124,12 +126,12 @@ pub fn parse_fn_decl(
     let Ok(block) = block else {
         return None;
     };
-    let node = Node::FnDeclStmnt {
+    let node = Node::FuncDeclStmnt {
         id: id.clone(),
         body: Box::new(block),
         params: params.clone(),
         return_type,
         mutable,
     };
-    return Some(Ok(node))
+    return Some(Ok(node));
 }

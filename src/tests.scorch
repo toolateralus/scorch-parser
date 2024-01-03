@@ -1,17 +1,8 @@
-struct X |
-    
-|
+x.y == vec().x = 10
+10 = x.y.y().v
 
-within X {
-    funcy_test : int() {
-        return 100
-    }
-    funcy_tester : int(this: X) {
-        return this.funcy_test()
-    }
-}
 
-x := new X()
+
 
 assert(x.funcy_test() == 100, 'failed to call funcy_test')
 
