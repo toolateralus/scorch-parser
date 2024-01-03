@@ -2,9 +2,8 @@ use crate::parser::literal::parse_struct_init;
 
 use super::super::*;
 use super::debug::*;
-use super::function::parse_fn_call;
+use super::function::parse_tuple;
 use super::keyword::parse_repeat_stmnt;
-use super::literal::parse_array_access;
 use super::literal::{parse_array_initializer, parse_digits};
 use super::*;
 
@@ -13,24 +12,11 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
 
     while let Some(token) = tokens.get(*index) {
         match token.kind {
-            TokenKind::LogicalAnd | TokenKind::LogicalOr => {
-                *index += 1;
-                let right = parse_logical(tokens, index)?;
-                left = Node::LogicalExpression {
-                    lhs: Box::new(left),
-                    op: token.kind,
-                    rhs: Box::new(right),
-                };
-            }
-            TokenKind::Dot => {
-                *index += 1;
-                let right = parse_accessor(tokens, index)?;
-                left = Node::BinaryOperation {
-                    lhs: Box::new(left),
-                    op: TokenKind::Dot,
-                    rhs: Box::new(right),
-                };
-            }
+            TokenKind::OpenParenthesis => {
+                let node = parse_expression(tokens, index)?;
+                consume_next_if_type(tokens, index, TokenKind::CloseParenthesis);
+                left = node;
+            },
             TokenKind::CloseParenthesis
             | TokenKind::CloseBracket
             | TokenKind::OpenCurlyBrace
@@ -79,6 +65,16 @@ pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
 
     while let Some(token) = tokens.get(*index) {
         match token.kind {
+            TokenKind::Assignment => {
+                consume_next_if_type(tokens, index, TokenKind::Assignment);
+                let id = Node::Identifier(token.value.clone());
+                let expression = parse_expression(tokens, index)?;
+                consume_delimiter(tokens, index);
+                left = Node::AssignStmnt {
+                    id: Box::new(id),
+                    expression: Box::new(expression),
+                };
+            }
             TokenKind::Equals
             | TokenKind::NotEquals
             | TokenKind::LessThanEquals
@@ -150,7 +146,7 @@ pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
             } else {
                 Node::NotOp
             };
-
+            
             assert!(
                 !(matches!(node, Node::NegOp(_)) || matches!(node, Node::NotOp(_))),
                 "Double not operations are not allowed"
@@ -180,44 +176,41 @@ pub fn parse_dot(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>
 }
 
 pub fn parse_accessor(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    let left = parse_operand(tokens, index)?;
-    let op = current_token(tokens, index);
-    
-    match op.kind {
-        TokenKind::OpenParenthesis => {
-            if let Node::Identifier(id) = &left {
-                parse_fn_call(index, tokens, &id).expect("Expected function call node, got")
-            } else {
-                Err(PrsErr {
-                    message: dbgmsg!("accessor err: Expected identifier"),
-                    token: current_token(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-                    inner_err: None,
-                })
+    let mut left = parse_operand(tokens, index)?;
+    while let Some(op) = tokens.get(*index) {
+        match op.kind {
+            TokenKind::OpenParenthesis => {
+                let tuple = parse_tuple(tokens, index)?;
+                left = Node::BinaryOperation {
+                    lhs: Box::new(left),
+                    op: TokenKind::Call,
+                    rhs: Box::new(tuple),
+                };
+            },
+            TokenKind::Dot => {
+                let right = parse_accessor(tokens, index)?;
+                left = Node::BinaryOperation {
+                    lhs: Box::new(left),
+                    op: TokenKind::Dot,
+                    rhs: Box::new(right),
+                };
+            },
+            TokenKind::OpenBracket => {
+                left = Node::BinaryOperation {
+                    lhs: Box::new(left),
+                    op: TokenKind::Subscript,
+                    rhs: Box::new(parse_expression(tokens, index)?),
+                }
             }
+            _ => return Ok(left),
         }
-        TokenKind::OpenBracket => {
-            if let Node::Identifier(id) = left {
-                *index += 1; // move past [
-                Ok(parse_array_access(index, tokens, &id)?)
-            } else {
-                Err(PrsErr {
-                    message: dbgmsg!("accessor err: Expected identifier"),
-                    token: current_token(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-                    inner_err: None,
-                })
-            }
-        }
-        _ => Ok(left),
-    }
+    };
+    Ok(left)
 }
 
 pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let identifier = tokens
-        .get(*index)
+    .get(*index)
         .expect("Unexpected end of tokens, {tokens}");
     *index += 1;
 
@@ -244,11 +237,7 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
                 elements_mutable: true,
             })
         }
-        TokenKind::OpenParenthesis => {
-            let node = parse_expression(tokens, index)?;
-            consume_next_if_type(tokens, index, TokenKind::CloseParenthesis);
-            Ok(node)
-        }
+        
         
         TokenKind::Repeat => parse_repeat_stmnt(current_token(tokens, index), index, tokens),
         _ => Err(PrsErr {

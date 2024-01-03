@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::lexer::TokenKind;
 
 pub const ARRAY_TNAME: &str = "array";
@@ -45,7 +47,7 @@ pub trait Visitor<T> {
 pub enum Node {
     Program(Vec<Box<Node>>),
     Block(Vec<Box<Node>>),
-
+    Tuple(Rc<Vec<Box<Node>>>),
     // literal & values
     Int(i32),
     Bool(bool),
@@ -196,10 +198,11 @@ impl Node {
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
             Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
-
-            Node::NegOp(..) => visitor.visit_neg_op(self),
-            Node::NotOp(..) => visitor.visit_not_op(self),
+            
+            Node::NegOp( .. ) => visitor.visit_neg_op(self),
+            Node::NotOp( .. ) => visitor.visit_not_op(self),
             Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
+            Node::Tuple( .. ) => todo!(),
         }
     }
 }

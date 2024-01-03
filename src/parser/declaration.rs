@@ -1,10 +1,9 @@
 // declarations
 
 use super::super::*;
-use super::literal::parse_array_access;
 use super::{
     debug::*,
-    function::{parse_fn_call, parse_fn_decl, parse_parameters},
+    function::{parse_fn_decl, parse_parameters},
 };
 use super::{expression::parse_expression, *};
 use crate::{
@@ -108,36 +107,6 @@ pub fn parse_decl_stmnt(
     match operator.kind {
         TokenKind::ColonEquals => parse_implicit_decl(index, tokens, &id, mutable),
         TokenKind::Colon => parse_explicit_decl(index, tokens, token, id, mutable),
-        TokenKind::Assignment => {
-            consume_next_if_type(tokens, index, TokenKind::Assignment);
-            let id = Node::Identifier(token.value.clone());
-            let expression = parse_expression(tokens, index)?;
-            consume_delimiter(tokens, index);
-            Ok(Node::AssignStmnt {
-                id: Box::new(id),
-                expression: Box::new(expression),
-            })
-        }
-        TokenKind::OpenBracket => {
-            consume_next_if_type(tokens, index, TokenKind::OpenBracket);
-            let access = parse_array_access(index, tokens, token.value.as_str());
-            access
-        }
-
-        // function call
-        TokenKind::OpenParenthesis => {
-            let Some(node) = parse_fn_call(index, tokens, &token.value.clone()) else {
-                return Err(PrsErr {
-                    message: dbgmsg!("decl err: Expected function call"),
-                    token: current_token(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-                    inner_err: None,
-                });
-            };
-            node
-        }
-
         _ => {
             return Err(PrsErr {
                 message: dbgmsg!("decl err: invalid operator"),

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::{
     ast::Node,
     dbgmsg,
@@ -8,7 +10,7 @@ use super::{
     current_token,
     debug::*,
     expression::{parse_expression, parse_operand},
-    parse_block,
+    parse_block, consume_next_if_type,
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
@@ -85,29 +87,30 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
     }
     Ok(params)
 }
-pub fn parse_arguments(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
-    *index += 1; // discard open_paren
-
+pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
+    consume_next_if_type(tokens, index, TokenKind::OpenParenthesis);
+    
     let mut args = Vec::new();
     
     loop {
         let token = current_token(tokens, index);
-        // paramless.
+        // empty tuple
         if token.kind == TokenKind::CloseParenthesis {
             *index += 1;
             break;
         }
         // accumulate parameter expressions
         let arg = parse_expression(tokens, index)?;
-
+        
         // skip commas
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-
-        args.push(arg);
+        
+        args.push(Box::new(arg));
     }
-    Ok(args)
+        
+    Ok(Node::Tuple(Rc::new(args)))
 }
 pub fn parse_fn_decl(
     params: &Vec<Node>,
@@ -117,54 +120,16 @@ pub fn parse_fn_decl(
     return_type: String,
     mutable: bool,
 ) -> Option<Result<Node, PrsErr>> {
-    let token = current_token(tokens, index);
-    let kind = token.kind;
-    if kind == TokenKind::OpenCurlyBrace {
-        let body = match parse_block(tokens, index) {
-            Ok(body) => body,
-            Err(inner_err) => {
-                return Some(Err(PrsErr {
-                    message: dbgmsg!("fn decl err: invalid block"),
-                    token: current_token(tokens, index).clone(),
-                    type_: ErrType::UnexpectedToken,
-                    index: *index,
-                    inner_err: Some(Box::new(inner_err)),
-                }));
-            }
-        };
-
-        let node = Node::FnDeclStmnt {
-            id: id.clone(),
-            body: Box::new(body),
-            params: params.clone(),
-            return_type,
-            mutable,
-        };
-        return Some(Ok(node));
-    }
-    None
-}
-pub fn parse_fn_call(
-    index: &mut usize,
-    tokens: &Vec<Token>,
-    token: &String,
-) -> Option<Result<Node, PrsErr>> {
-    let arguments = match parse_arguments(tokens, index) {
-        Ok(arguments) => arguments,
-        Err(inner_err) => {
-            return Some(Err(PrsErr {
-                message: dbgmsg!("Expected arguments"),
-                token: current_token(tokens, index).clone(),
-                type_: ErrType::UnexpectedToken,
-                index: *index,
-                inner_err: Some(Box::new(inner_err)),
-            }));
-        }
+    let block = parse_block(tokens, index);
+    let Ok(block) = block else {
+        return None;
     };
-
-    let node = Node::FunctionCall {
-        id: token.clone(),
-        arguments: Some(arguments),
+    let node = Node::FnDeclStmnt {
+        id: id.clone(),
+        body: Box::new(block),
+        params: params.clone(),
+        return_type,
+        mutable,
     };
-    Some(Ok(node))
+    return Some(Ok(node))
 }
