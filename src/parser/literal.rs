@@ -13,7 +13,7 @@ pub fn parse_digits(identifier: &Token) -> Result<Node, PrsErr> {
 
 // arrays
 pub fn new_array(
-    typename: String,
+    typename: Box<Node>,
     init_capacity: usize,
     elements: Vec<Box<Node>>,
     mutable: bool,
@@ -57,39 +57,4 @@ pub fn parse_array_initializer(
         args.push(Box::new(arg));
     }
     Ok(args)
-}
-
-pub fn parse_struct_init(
-    tokens: &Vec<Token>,
-    index: &mut usize,
-    identifier: &Token,
-) -> Result<Node, PrsErr> {
-    let mut args = Vec::new();
-
-    loop {
-        if *index >= tokens.len() {
-            break;
-        }
-
-        let token = current_token(tokens, index);
-        match token.kind {
-            TokenKind::Newline => *index += 1,
-            TokenKind::CloseCurlyBrace | TokenKind::CloseParenthesis => {
-                *index += 1;
-                break;
-            }
-            _ => {
-                args.push(parse_expression(tokens, index)?);
-
-                if current_token(tokens, index).kind == TokenKind::Comma {
-                    *index += 1;
-                }
-            }
-        }
-    }
-
-    return Ok(Node::StructInit {
-        id: identifier.value.clone(),
-        args,
-    });
 }

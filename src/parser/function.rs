@@ -9,13 +9,12 @@ use crate::{
 use super::{
     consume, current_token,
     debug::*,
-    expression::{parse_expression, parse_operand},
-    parse_block,
+    expression::{parse_expression, parse_operand, parse_block},
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
     let mut params = Vec::new();
-
+    
     loop {
         let mut token = current_token(tokens, index);
 
@@ -118,8 +117,8 @@ pub fn parse_fn_block_ret_decl_stmnt_node(
     params: &Vec<Node>,
     tokens: &Vec<Token>,
     index: &mut usize,
-    id: &String,
-    return_type: String,
+    id: &Box<Node>,
+    return_type: Box<Node>,
     mutable: bool,
 ) -> Option<Result<Node, PrsErr>> {
     let block = parse_block(tokens, index);
@@ -130,7 +129,7 @@ pub fn parse_fn_block_ret_decl_stmnt_node(
         id: id.clone(),
         body: Box::new(block),
         params: params.clone(),
-        return_type,
+        return_t: return_type,
         mutable,
     };
     return Some(Ok(node));

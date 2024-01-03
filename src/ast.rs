@@ -89,13 +89,13 @@ pub enum Node {
         expression: Box<Node>,
     },
     DeclStmt {
-        target_type: String,
-        id: Box<Node>,
-        expression: Box<Node>,
+        target_type: Box<Node>,
+        target_id: Box<Node>,
+        expression: Option<Box<Node>>,
         mutable: bool,
     },
     RepeatStmnt {
-        id: Box<Node>,
+        id: Option<Box<Node>>,
         condition: Option<Box<Node>>,
         block: Box<Node>,
     },
@@ -128,7 +128,7 @@ pub enum Node {
         elements_mutable: bool,
     },
     StructDecl {
-        id: String,
+        id: Box<Node>,
         block: Box<Node>,
     },
     TypeAssocBlockStmnt {
