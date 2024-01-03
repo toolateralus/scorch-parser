@@ -14,12 +14,11 @@ use super::{
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
     let mut params = Vec::new();
-
+    
     loop {
         let mut token = current_token(tokens, index);
-
+        
         if token.kind == TokenKind::CloseParenthesis {
-            *index += 1;
             break;
         }
 
@@ -84,6 +83,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
 
         params.push(param_decl_node);
     }
+    
     Ok(params)
 }
 pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {

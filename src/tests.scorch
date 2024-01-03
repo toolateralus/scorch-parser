@@ -1,7 +1,7 @@
 ff_addition := 5.3 + 6.2
 
 x.y == vec().x = 10
-10 = x.y.y().v
+b := x.y.y().v == 10
 assert(x.funcy_test() == 100, 'failed to call funcy_test')
 
 
@@ -106,12 +106,12 @@ age := 'mid 20s'
 height := '6 feet, 3.758168 inches'
 var status := 'failed'
 
-implicit_fn_test_params : none(a: String) {
+fn implicit_fn_test_params : none(a: String) {
     println('recursive func ', a)
     status = 'passed'
 }
 
-implicit_fn_test_no_params : none() {
+fn implicit_fn_test_no_params : none() {
     status = 'passed'
     println('recursive func paramless')
 }

@@ -28,7 +28,7 @@ pub fn parse_type_assoc_decl_block(
             break;
         }
 
-        match parse_decl_stmnt(index, tokens, mutable) {
+        match parse_decl_or_expr(index, tokens, mutable) {
             Ok(node) => {
                 let is_valid = match node {
                     Node::FuncDeclStmnt { .. } => true,
@@ -75,7 +75,7 @@ pub fn parse_struct_decl_block(
             false
         };
 
-        match parse_decl_stmnt(index, tokens, mutable) {
+        match parse_decl_or_expr(index, tokens, mutable) {
             Ok(node) => statements.push(Box::new(node)),
             Err(inner_err) => panic!(
                 "struct decl block err: invalid declaration\ninner err:\n{:#?}",
@@ -91,30 +91,47 @@ pub fn parse_struct_decl_block(
     }
 }
 
-pub fn parse_decl_stmnt(
+// This is the main entry point for parsing declarations & expressions.
+pub fn parse_decl_or_expr(
     index: &mut usize,
     tokens: &Vec<Token>,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    let id = Box::new(parse_expression(tokens, index)?);
-
-    consume(tokens, index, TokenKind::Identifier);
-
-    let operator = current_token(tokens, index);
-
-    match operator.kind {
-        TokenKind::ColonEquals => parse_implicit_decl(index, tokens, id, mutable),
-        TokenKind::Colon => parse_explicit_decl(index, tokens, id, mutable),
-        _ => {
+    
+    let identifier = match parse_expression(tokens, index) {
+        Ok(node) => node,
+        Err(inner_err) => {
             return Err(PrsErr {
-                message: dbgmsg!("decl err: invalid operator"),
-                token: operator.clone(),
+                message: dbgmsg!("statement err: left side could not parse"),
+                token: current_token(tokens, index).clone(),
                 type_: ErrType::UnexpectedToken,
                 index: *index,
-                inner_err: None,
+                inner_err: Some(Box::new(inner_err)),
             });
         }
-    }
+    };
+    
+    let operator = consume_newlines(index, tokens);
+    
+    return match operator.kind {
+        TokenKind::Colon => {
+            consume(tokens, index, TokenKind::Colon);
+            parse_explicit_decl(index, tokens, Box::new(identifier), mutable)
+        }
+        TokenKind::ColonEquals => {
+            consume(tokens, index, TokenKind::ColonEquals);
+            parse_implicit_decl(index, tokens, Box::new(identifier), false)
+        }
+        TokenKind::Assignment => {
+            consume(tokens, index, TokenKind::Assignment);
+            let expression = parse_expression(tokens, index)?;
+            Ok(Node::AssignStmnt {
+                id: Box::new(identifier),
+                expression: Box::new(expression),
+            })
+        }
+        _ => Ok(identifier),
+    };
 }
 
 pub fn parse_implicit_decl(
@@ -123,17 +140,16 @@ pub fn parse_implicit_decl(
     id: Box<Node>,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    consume(tokens, index, TokenKind::ColonEquals);
-
+    
     if current_token(tokens, index).kind == TokenKind::Newline {
         let _token = consume_newlines(index, tokens);
     }
-
+    
     // implicit variable declaration
     let value = parse_expression(tokens, index)?;
-
+    
     consume_delimiter(tokens, index);
-
+    
     Ok(Node::DeclStmt {
         target_type: Box::new(Node::Identifier(String::from(DYNAMIC_TNAME))),
         target_id: id,
@@ -148,32 +164,13 @@ pub fn parse_explicit_decl(
     id: Box<Node>,
     mutable: bool,
 ) -> Result<Node, PrsErr> {
-    consume(tokens, index, TokenKind::Colon);
-
+    
     let target_t = parse_operand(tokens, index)?;
-
-    consume(tokens, index, TokenKind::Identifier);
-
+    
+    dbg!(target_t.clone());
+    
     let token = current_token(tokens, index);
-
-    if token.kind == TokenKind::OpenParenthesis {
-        consume(tokens, index, TokenKind::OpenParenthesis);
-        let params = parse_parameters(tokens, index)?;
-        let block = parse_block(tokens, index)?;
-        return Ok(Node::FuncDeclStmnt {
-            id,
-            params,
-            return_t: Box::new(target_t),
-            body: Box::new(block),
-            mutable,
-        });
-    }
-
-    // varname : type^ = default;
-
-    let token = current_token(tokens, index);
-
-    // varname : type
+    
     // uninitialized ((default for now))
     if token.kind == TokenKind::Newline {
         consume(tokens, index, TokenKind::Newline);
@@ -185,9 +182,9 @@ pub fn parse_explicit_decl(
             mutable,
         });
     }
-
+    
     consume(tokens, index, TokenKind::Assignment);
-
+    
     // varname : type = ^default;
 
     let expression = parse_expression(tokens, index)?;

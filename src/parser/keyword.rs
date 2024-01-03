@@ -1,8 +1,9 @@
 use super::super::*;
 use super::debug::{ErrType, PrsErr};
-use super::declaration::{parse_decl_stmnt, parse_struct_decl, parse_type_assoc_block};
+use super::declaration::{parse_decl_or_expr, parse_struct_decl, parse_type_assoc_block};
 use super::expression::{parse_block, parse_expression, parse_operand};
 use super::*;
+use super::function::parse_parameters;
 // keywords
 
 pub fn parse_return(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
@@ -58,12 +59,13 @@ pub fn parse_keyword_ops(
     match keyword.kind {
         TokenKind::Const => {
             consume(tokens, index, TokenKind::Const);
-            parse_decl_stmnt(index, tokens, false)
+            parse_decl_or_expr(index, tokens, false)
         }
         TokenKind::Var => {
             consume(tokens, index, TokenKind::Var);
-            parse_decl_stmnt(index, tokens, true)
+            parse_decl_or_expr(index, tokens, true)
         }
+        TokenKind::Fn => parse_function(index, tokens),
         TokenKind::Return => parse_return(index, tokens),
         TokenKind::Repeat => parse_repeat_stmnt(index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
@@ -88,6 +90,36 @@ pub fn parse_keyword_ops(
             })
         }
     }
+}
+
+fn parse_function(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+    dbg!("starting function declaration.");
+    
+    consume(tokens, index, TokenKind::Fn);
+    let id = parse_operand(tokens, index)?;
+    
+    consume(tokens, index, TokenKind::Colon);
+    let type_id = parse_operand(tokens, index)?;
+    
+    consume(tokens, index, TokenKind::OpenParenthesis);
+    let params = parse_parameters(tokens, index)?;
+    
+    consume(tokens, index, TokenKind::CloseParenthesis);
+    
+    // parse block handles its own delimiters.
+    let block = parse_block(tokens, index)?;
+    
+    
+    dbg!("end function declaration.");
+    return Ok(Node::FuncDeclStmnt {
+        id: Box::new(id),
+        params : params,
+        return_t: Box::new(type_id),
+        body: Box::new(block),
+        mutable: false, // todo :: allow mutable function declarations?
+    });
+    
+    
 }
 
 pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {

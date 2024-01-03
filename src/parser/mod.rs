@@ -56,10 +56,26 @@ pub fn generate_random_function_name() -> String {
         .collect();
     name
 }
+pub fn lookbehind<'a>(tokens: &'a Vec<Token>, index: &'a mut usize, n: usize) -> &'a Token {
+    let mut i = *index - n;
+    let lookbehind = current_token(tokens, &mut i);
+    &lookbehind
+}
+pub fn lookahead<'a>(tokens: &'a Vec<Token>, index: &mut usize, n: usize) -> &'a Token {
+    let mut i = *index + n;
+    let lookbehind = current_token(tokens, &mut i);
+    &lookbehind
+}
+
 pub fn consume(tokens: &Vec<Token>, index: &mut usize, expected: TokenKind) {
     let current = current_token(tokens, index);
     if current.kind != expected {
-        panic!("Expected {:?}, got {:?}", expected, current.kind);
+        panic!(
+            "Expected {:?}, got {:?}.\n\n 8 surrounding tokens: {:#?}",
+            expected,
+            current.kind,
+            tokens[(*index).saturating_sub(4)..(*index + 4).min(tokens.len())].to_vec()
+        );
     }
     *index += 1;
 }

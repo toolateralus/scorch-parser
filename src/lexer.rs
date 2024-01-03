@@ -41,6 +41,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("return"), TokenKind::Return),
         (String::from("if"), TokenKind::If),
         (String::from("else"), TokenKind::Else),
+        (String::from("fn"), TokenKind::Fn),
         (String::from("override"), TokenKind::Override),
         (String::from("new"), TokenKind::New),
         (String::from("struct"), TokenKind::Struct),
@@ -76,38 +77,38 @@ pub enum TokenKind {
     Number, // 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
     String, // "hello world"
     Bool,   // true or false
-
+    
     // identifiers
     Identifier, // variable name, function name, etc.
-
+    
     // operators
     Add,      // +
     Subtract, // -
     Multiply, // *
     Divide,   // /
-
+    
     Equals,            // ==
     NotEquals,         // !=
     LessThanEquals,    // <=
     GreaterThanEquals, // >=
-
+    
     LeftAngle,  // <
     RightAngle, // >
-
+    
     LogicalAnd, // &&
     LogicalOr,  // ||
     Not,        // !
-
+    
     Colon,       // : // type annotation operator.
     ColonEquals, // := implicit declaration operator.
     Assignment,  // =
     // special operators
     Dot,  // . access operator.
     Pipe, // struct body delimiter.
-
+    
     // punctuation
     Newline, // \n .. our expression delimiter, in place of ;
-
+    
     OpenParenthesis,  // (
     CloseParenthesis, // )
     OpenCurlyBrace,   // {
@@ -116,7 +117,7 @@ pub enum TokenKind {
     CloseBracket,     // ]
     Comma,            // ,
     Eof,              // end of file.
-
+    
     // KEYWORDS
     If,     // if comparison {...}
     Else,   // else || else comparison {...}
@@ -128,8 +129,7 @@ pub enum TokenKind {
     Const,  // const varname : Type = value || const func : fn() {..} || const v := 100
     Var,
     Override,
-    Subscript,
-    Call, // var varname : Type = value || var func : fn() {..} || var v := 100
+    Fn,
 }
 #[derive(Debug, Clone)]
 pub struct Token {

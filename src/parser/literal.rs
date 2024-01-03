@@ -37,14 +37,13 @@ pub fn parse_array_initializer(
         let token = current_token(tokens, index);
         // paramless.
         if token.kind == TokenKind::CloseBracket {
-            *index += 1;
             break;
         }
 
         if token.kind == TokenKind::Newline {
             *index += 1;
         }
-
+        
         // accumulate parameter expressions
         let arg = parse_expression(tokens, index)?;
 
