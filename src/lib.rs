@@ -32,9 +32,11 @@ mod tests {
             .expect("Failed to read file");
         let mut tokenizer = create_tokenizer();
         tokenizer.tokenize(input.as_str());
-
+        
         let ast_root = expression::parse_program(&tokenizer.tokens);
-
+        
+        panic!("AST ROOT: {:#?}", &ast_root);
+        
         match ast_root {
             Ok(_) => {}
             Err(err) => panic!("{:#?}", err),

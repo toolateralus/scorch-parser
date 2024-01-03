@@ -1,9 +1,11 @@
+use std::thread::current;
+
 use super::super::*;
 use super::debug::*;
 use super::declaration::parse_decl_or_expr;
-use super::function::parse_parameters;
 use super::function::parse_tuple;
-use super::keyword::parse_repeat_stmnt;
+use super::keyword::parse_while_stmnt;
+use super::keyword::parse_return;
 use super::literal::{parse_array_initializer, parse_digits};
 use super::*;
 
@@ -40,6 +42,7 @@ pub fn parse_program(tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     Ok(Node::Program(statements))
 }
 pub fn parse_block(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
+    _ = consume_newlines(index, tokens);
     consume(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
     while *index < tokens.len() {
@@ -111,7 +114,6 @@ pub fn parse_expression(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
     }
     Ok(left)
 }
-
 pub fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_relational(tokens, index)?;
     
@@ -131,7 +133,6 @@ pub fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     }
     Ok(left)
 }
-
 pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_bin_op(tokens, index)?;
     
@@ -152,7 +153,6 @@ pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
     }
     Ok(left)
 }
-
 pub fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_term(tokens, index)?;
     
@@ -168,7 +168,6 @@ pub fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsE
     }
     Ok(left)
 }
-
 pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut left = parse_unary(tokens, index)?;
     
@@ -185,7 +184,6 @@ pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
     
     Ok(left)
 }
-
 pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let op = current_token(tokens, index);
     match op.kind {
@@ -208,6 +206,12 @@ pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
         _ => parse_operand(tokens, index),
     }
 }
+pub fn parse_type_name(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr>{
+    let token =current_token(tokens, index);
+    consume(tokens, index, TokenKind::Identifier);
+    return Ok(Node::Identifier(token.value.clone()));
+}
+
 pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let token = current_token(tokens, index);
     let mut left = match token.kind {
@@ -226,12 +230,17 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
         TokenKind::String => {
             consume(tokens, index, TokenKind::String);
             Ok(Node::String(token.value.clone()))
-        }
-        
+        }  
         TokenKind::OpenParenthesis => {
             consume(tokens, index, TokenKind::OpenParenthesis);
-            let expression = parse_expression(tokens, index);
+            let expression = parse_tuple(tokens, index);
             consume(tokens, index, TokenKind::CloseParenthesis);
+            // for parenthesized expressions
+            if let Ok(Node::Tuple(elements)) = &expression {
+                if elements.len() == 1 {
+                    return Ok(Node::Expression(elements[0].clone()));
+                }
+            }
             expression
         }
         TokenKind::OpenBracket => {
@@ -252,29 +261,35 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
         // not clog up this file.
         TokenKind::New => {
             consume(tokens, index, TokenKind::New);
-            consume_next_if_any(
-                tokens,
-                index,
-                vec![TokenKind::OpenParenthesis, TokenKind::OpenCurlyBrace],
-            );
-            parse_expression(tokens, index)
+            let typename = parse_type_name(tokens, index)?;
+            consume(tokens, index, TokenKind::OpenParenthesis);
+            let args = parse_tuple(tokens,index)?;
+            consume(tokens, index, TokenKind::CloseParenthesis);
+            Ok(Node::BinaryOperation { 
+                lhs: Box::new(typename), 
+                op: TokenKind::New,
+                rhs: Box::new(args)
+            })
         }
-        TokenKind::Repeat => parse_repeat_stmnt(index, tokens),
+        TokenKind::Return => parse_return(index, tokens), 
+        TokenKind::While => parse_while_stmnt(index, tokens),
         _ => {
             panic!("{:#?}", token);
         }
     }?;
-
+    
     // optionally, get chained operations
     while let Some(op) = tokens.get(*index) {
         match op.kind {
             // function calls
             TokenKind::OpenParenthesis => {
+                consume(tokens, index, TokenKind::OpenParenthesis);
+                // tuple declaration (i : string)
                 if lookahead(tokens, index, 2).kind == TokenKind::Colon {
                     break;
                 }
-                
                 let tuple = parse_tuple(tokens, index)?;
+                consume(tokens, index, TokenKind::CloseParenthesis);
                 bin_op(&mut left, op, &tuple)
             }
             TokenKind::Dot => {
@@ -290,7 +305,7 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             _ => return Ok(left),
         }
     }
-
+    
     Ok(left)
 }
 

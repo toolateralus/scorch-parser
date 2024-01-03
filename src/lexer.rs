@@ -45,7 +45,7 @@ pub fn create_tokenizer() -> Tokenizer {
         (String::from("override"), TokenKind::Override),
         (String::from("new"), TokenKind::New),
         (String::from("struct"), TokenKind::Struct),
-        (String::from("repeat"), TokenKind::Repeat),
+        (String::from("while"), TokenKind::While),
         (String::from("within"), TokenKind::Within),
     ]);
 
@@ -121,7 +121,7 @@ pub enum TokenKind {
     // KEYWORDS
     If,     // if comparison {...}
     Else,   // else || else comparison {...}
-    Repeat, // repeat {..} || repeat ID comparison {..} // if ID doesnt exist its implied to be 0.
+    While, // while {..} || while ID comparison {..} // if ID doesnt exist its implied to be 0.
     Return, // return expr
     Struct, // struct TypeName | field_decl ... |
     New,    // new Typename() || new Typename{}

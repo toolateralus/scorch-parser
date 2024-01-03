@@ -9,7 +9,7 @@ use crate::{
 use super::{
     consume, current_token,
     debug::*,
-    expression::{parse_block, parse_expression, parse_operand},
+    expression::{parse_block, parse_expression, parse_operand}, consume_newlines,
 };
 // function helpers
 pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
@@ -66,7 +66,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
                 });
             }
         }
-
+        
         // parsing type
         // varname: ^Typename
         let typename = parse_operand(tokens, index)?;
@@ -75,7 +75,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-
+        
         let param_decl_node = Node::ParamDecl {
             varname: Box::new(varname),
             typename: Box::new(typename),
@@ -87,29 +87,29 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
     Ok(params)
 }
 pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    consume(tokens, index, TokenKind::OpenParenthesis);
-
     let mut args = Vec::new();
-
+    
     loop {
+        _ = consume_newlines(index, tokens);
+        
         let token = current_token(tokens, index);
         // empty tuple
+        // Close curly brace is a hack, remove this. 
         if token.kind == TokenKind::CloseParenthesis {
-            *index += 1;
             break;
         }
         // accumulate parameter expressions
         let arg = parse_expression(tokens, index)?;
-
-        // skip commas
+        
+        // skip commas if present
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
-
+        
         args.push(Box::new(arg));
     }
-
-    Ok(Node::Tuple(Rc::new(args)))
+    
+    Ok(Node::Tuple(args))
 }
 
 // great name

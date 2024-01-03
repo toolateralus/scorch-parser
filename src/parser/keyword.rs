@@ -1,3 +1,5 @@
+use crate::parser::expression::parse_type_name;
+
 use super::super::*;
 use super::debug::{ErrType, PrsErr};
 use super::declaration::{parse_decl_or_expr, parse_struct_decl, parse_type_assoc_block};
@@ -7,8 +9,8 @@ use super::function::parse_parameters;
 // keywords
 
 pub fn parse_return(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
-    let second = current_token(tokens, index);
     consume(tokens, index, TokenKind::Return);
+    let second = current_token(tokens, index);
     match second.kind {
         TokenKind::Newline => Ok(Node::ReturnStmnt(None)),
         _ if second.kind != TokenKind::CloseCurlyBrace => {
@@ -25,27 +27,23 @@ pub fn parse_return(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsE
     }
 }
 
-pub fn parse_repeat_stmnt(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+pub fn parse_while_stmnt(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
+    consume(tokens, index, TokenKind::While);
+    
     let next = current_token(tokens, index);
-
     if next.family == TokenFamily::Identifier {
-        let id = Box::new(parse_operand(tokens, index)?);
-        consume(tokens, index, TokenKind::Repeat);
         let condition = parse_expression(tokens, index)?;
         let block = parse_block(tokens, index)?;
-        let node = Node::RepeatStmnt {
-            id: Some(id),
+        let node = Node::WhileStmnt {
             condition: Some(Box::new(condition)),
             block: Box::new(block),
         };
         return Ok(node);
     }
-
-    consume(tokens, index, TokenKind::Repeat);
+    
     let block = parse_block(tokens, index)?;
 
-    Ok(Node::RepeatStmnt {
-        id: None,
+    Ok(Node::WhileStmnt {
         condition: None,
         block: Box::new(block),
     })
@@ -67,7 +65,7 @@ pub fn parse_keyword_ops(
         }
         TokenKind::Fn => parse_function(index, tokens),
         TokenKind::Return => parse_return(index, tokens),
-        TokenKind::Repeat => parse_repeat_stmnt(index, tokens),
+        TokenKind::While => parse_while_stmnt(index, tokens),
         TokenKind::If => Ok(parse_if_else(tokens, index)?),
         TokenKind::Within => parse_type_assoc_block(index, tokens),
         TokenKind::Else => {
@@ -99,7 +97,7 @@ fn parse_function(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr
     let id = parse_operand(tokens, index)?;
     
     consume(tokens, index, TokenKind::Colon);
-    let type_id = parse_operand(tokens, index)?;
+    let type_id = parse_type_name(tokens, index)?;
     
     consume(tokens, index, TokenKind::OpenParenthesis);
     let params = parse_parameters(tokens, index)?;
@@ -108,7 +106,6 @@ fn parse_function(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr
     
     // parse block handles its own delimiters.
     let block = parse_block(tokens, index)?;
-    
     
     dbg!("end function declaration.");
     return Ok(Node::FuncDeclStmnt {
@@ -123,9 +120,9 @@ fn parse_function(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr
 }
 
 pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
-    *index += 1; // discard 'if'
+    consume(tokens, index, TokenKind::If);
     let if_condition = parse_expression(tokens, index)?;
-
+    
     if current_token(tokens, index).kind != TokenKind::OpenCurlyBrace {
         return Err(PrsErr {
             message: dbgmsg!("Expected open curly brace after if condition"),
@@ -135,13 +132,11 @@ pub fn parse_if_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             inner_err: None,
         });
     }
-
-    *index += 1; // skip open brace
-
+    
     let if_block = parse_block(tokens, index)?;
-
+    
     let else_or_end = consume_newlines(index, tokens);
-
+    
     // if, no else.
     if else_or_end.kind == TokenKind::Else {
         let else_node = match parse_else(tokens, index) {
@@ -201,15 +196,6 @@ pub fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
     else {
         let else_condition = parse_expression(tokens, index)?;
         let cur = current_token(tokens, index);
-
-        match cur.kind {
-            TokenKind::OpenCurlyBrace | TokenKind::CloseParenthesis => {
-                *index += 1; // skip open brace
-            }
-            _ => {
-                // continue.
-            }
-        }
 
         let else_block = parse_block(tokens, index)?;
 

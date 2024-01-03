@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use super::lexer::TokenKind;
 
 pub const ARRAY_TNAME: &str = "array";
@@ -21,7 +19,7 @@ pub trait Visitor<T> {
     fn visit_function_decl(&mut self, node: &Node) -> T;
     fn visit_function_call(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
-    fn visit_repeat_stmnt(&mut self, node: &Node) -> T;
+    fn visit_while_stmnt(&mut self, node: &Node) -> T;
     fn visit_break_stmnt(&mut self, node: &Node) -> T;
     fn visit_relational_expression(&mut self, node: &Node) -> T;
     fn visit_logical_expression(&mut self, node: &Node) -> T;
@@ -49,7 +47,7 @@ pub trait Visitor<T> {
 pub enum Node {
     Program(Vec<Box<Node>>),
     Block(Vec<Box<Node>>),
-    Tuple(Rc<Vec<Box<Node>>>),
+    Tuple(Vec<Box<Node>>),
     // literal & values
     Int(i32),
     Bool(bool),
@@ -94,8 +92,7 @@ pub enum Node {
         expression: Option<Box<Node>>,
         mutable: bool,
     },
-    RepeatStmnt {
-        id: Option<Box<Node>>,
+    WhileStmnt {
         condition: Option<Box<Node>>,
         block: Box<Node>,
     },
@@ -132,16 +129,8 @@ pub enum Node {
         block: Box<Node>,
     },
     TypeAssocBlockStmnt {
-        typename: String,
+        typename: Box<Node>,
         block: Box<Node>,
-    },
-    OpOverrideDecl {
-        op: TokenKind,
-        func: Box<Node>,
-        lhs_tname: String,
-        lhs_varname: String,
-        rhs_tname: String,
-        rhs_varname: String,
     },
 }
 impl Node {
@@ -164,15 +153,14 @@ impl Node {
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
             Node::FuncDeclStmnt { .. } => visitor.visit_function_decl(self),
-            Node::OpOverrideDecl { .. } => visitor.visit_op_ovr_decl(self),
-
+            
             // todo: make a blanket node for statements.
             Node::TypeAssocBlockStmnt { .. } => visitor.visit_type_assoc_block(self),
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
             Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
             Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
-            Node::RepeatStmnt { .. } => visitor.visit_repeat_stmnt(self),
+            Node::WhileStmnt { .. } => visitor.visit_while_stmnt(self),
 
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),

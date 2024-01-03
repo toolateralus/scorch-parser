@@ -106,7 +106,7 @@ age := 'mid 20s'
 height := '6 feet, 3.758168 inches'
 var status := 'failed'
 
-fn implicit_fn_test_params : none(a: String) {
+fn implicit_fn_test_params : none(a: int) {
     println('recursive func ', a)
     status = 'passed'
 }
@@ -192,25 +192,29 @@ var result1 := false
 var result2 := false
 var i := 0
 
-repeat i < 10000 {
+assert(result1, 'Test: Implicitly declared iterator while with condition failed.')
+
+while {
+    return
+    println('test: while without condition failing.. result is this infinite loop. please exit.')
+}
+
+var i := 0
+while i < 10000 {
+    i = i + 1
     result = true
 }
 
-assert(result && i == 10000, 'Test: Cached repeat with condition failed, expected 10000 got ' + tostr(i))
 
-repeat z < 250000 {
+assert(result && i == 10000, 'Test: Cached while with condition failed, expected 10000 got ' + tostr(i))
+
+while z < 250000 {
     if z == 249999 {
         result1 = true
         return
     }
 } 
 
-assert(result1, 'Test: Implicitly declared iterator repeat with condition failed.')
-
-repeat {
-    return
-    println('test: repeat without condition failing.. result is this infinite loop. please exit.')
-}
 
 result2 = true
 assert(result2, 'Test: Repeat without condition failed.')
@@ -270,7 +274,7 @@ struct Vec2 |
     y := 0.0
 |
 
-vector2 := new Vec2 { 0.0, 1250.050 }
+vector2 := new Vec2(0.0, 1250.050)
 
 assert_eq(0.0, vector2.x, 'Vec2.x failed to equal expected value')
 assert_eq(1250.050, vector2.y, 'Vec2.y failed to equal expected value')
@@ -278,17 +282,17 @@ assert_eq(1250.050, vector2.y, 'Vec2.y failed to equal expected value')
 
 // complex type
 struct Vec3 |
-    xy := new Vec2{0.0, 0.0}
+    xy := new Vec2(0.0, 0.0)
     z := 0.0
 |
 
-vector3 := new Vec3 {
-    new Vec2 {
+vector3 := new Vec3(
+    new Vec2 (
         0.0,
         1250.050
-    },
+    ),
     100.0
-}
+)
 
 //# temp while chained field access isn't working.
 xy := vector3.xy

@@ -62,8 +62,7 @@ pub fn parse_struct_decl_block(
 ) {
     while *index < tokens.len() {
         let mut token = consume_newlines(index, tokens);
-        *index += 1;
-
+        
         if token.kind == TokenKind::Pipe {
             break;
         }
@@ -74,7 +73,7 @@ pub fn parse_struct_decl_block(
         } else {
             false
         };
-
+        
         match parse_decl_or_expr(index, tokens, mutable) {
             Ok(node) => statements.push(Box::new(node)),
             Err(inner_err) => panic!(
@@ -199,13 +198,13 @@ pub fn parse_explicit_decl(
 
 pub fn parse_type_assoc_block(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr> {
     consume(tokens, index, TokenKind::Within);
-    let typename = current_token(tokens, index);
+    let typename = parse_operand(tokens, index)?;
     consume(tokens, index, TokenKind::Identifier);
     consume(tokens, index, TokenKind::OpenCurlyBrace);
     let mut statements = Vec::new();
     parse_type_assoc_decl_block(index, tokens, &mut statements);
     Ok(Node::TypeAssocBlockStmnt {
-        typename: typename.value.clone(),
+        typename: Box::new(typename),
         block: Box::new(Node::Block(statements)),
     })
 }
@@ -225,17 +224,18 @@ pub fn parse_struct_decl(index: &mut usize, tokens: &Vec<Token>) -> Result<Node,
             inner_err: None,
         });
     }
-
+    
     let mut statements = Vec::new();
-
-    token = consume_newlines(index, tokens);
-
-    if token.kind == TokenKind::Pipe {
-        *index += 1;
-    }
-
+    
+    _= consume_newlines(index, tokens);
+    
+    consume(tokens, index, TokenKind::Pipe);
+    
+    _= consume_newlines(index, tokens);
+    
     parse_struct_decl_block(index, tokens, &mut statements);
-
+    
+    consume(tokens, index, TokenKind::Pipe);
     Ok(Node::StructDecl {
         id: Box::new(id?),
         block: Box::new(Node::Block(statements)),
