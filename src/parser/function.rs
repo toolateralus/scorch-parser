@@ -12,7 +12,7 @@ use super::{
     expression::{parse_block, parse_expression, parse_operand}, consume_newlines,
 };
 // function helpers
-pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<Node>, PrsErr> {
+pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut params = Vec::new();
     
     loop {
@@ -21,7 +21,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         if token.kind == TokenKind::CloseParenthesis {
             break;
         }
-
+        
         // parsing varname
         // ^varname: Typename
         if token.family != TokenFamily::Identifier {
@@ -33,11 +33,11 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
                 inner_err: None,
             })?;
         }
-
+        
         let varname = parse_operand(tokens, index)?;
-
+        
         token = current_token(tokens, index);
-
+        
         //parsing colon
         // varname^: Typename
         match token.kind {
@@ -70,21 +70,21 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
         // parsing type
         // varname: ^Typename
         let typename = parse_operand(tokens, index)?;
-
+        
         // consume comma if there is one.
         if current_token(tokens, index).kind == TokenKind::Comma {
             *index += 1;
         }
         
-        let param_decl_node = Node::KeyValueTuple {
+        let param_decl_node = Node::KeyValuePair {
             varname: Box::new(varname),
             typename: Box::new(typename),
         };
-
+        
         params.push(param_decl_node);
     }
     
-    Ok(params)
+    Ok(Node::KeyValueTuple { pairs: params })
 }
 pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let mut args = Vec::new();
@@ -114,7 +114,7 @@ pub fn parse_tuple(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
 
 // great name
 pub fn parse_fn_block_ret_decl_stmnt_node(
-    params: &Vec<Node>,
+    params: &Node,
     tokens: &Vec<Token>,
     index: &mut usize,
     id: &Box<Node>,
@@ -128,7 +128,7 @@ pub fn parse_fn_block_ret_decl_stmnt_node(
     let node = Node::FuncDeclStmnt {
         id: id.clone(),
         body: Box::new(block),
-        params: params.clone(),
+        params: Box::new(params.clone()),
         return_t: return_type,
         mutable,
     };

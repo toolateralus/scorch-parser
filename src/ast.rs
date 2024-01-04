@@ -31,8 +31,9 @@ pub trait Visitor<T> {
     fn visit_bool(&mut self, node: &Node) -> T;
     fn visit_array(&mut self, node: &Node) -> T;
     fn visit_number(&mut self, node: &Node) -> T;
-    fn visit_kv_tuple(&mut self, node: &Node) -> T;
     
+    fn visit_kv_tuple(&mut self, node: &Node) -> T;
+    fn visit_kv_pair(&mut self, node: &Node) -> T;
     // visitation terminator.
     fn visit_eof(&mut self, node: &Node) -> T;
     
@@ -121,11 +122,14 @@ pub enum Node {
     FuncDeclStmnt {
         id: Box<Node>,
         body: Box<Node>,
-        params: Vec<Node>,
+        params: Box<Node>,
         return_t: Box<Node>,
         mutable: bool,
     },
     KeyValueTuple {
+        pairs: Vec<Node>
+    },
+    KeyValuePair {
         varname: Box<Node>,
         typename: Box<Node>,
     },
@@ -154,12 +158,12 @@ impl Node {
             Node::Bool(..) => visitor.visit_bool(self),
             Node::Identifier(..) => visitor.visit_identifier(self),
             Node::String(..) => visitor.visit_string(self),
-
+            
             Node::Program(..) => visitor.visit_program(self),
             Node::Block(..) => visitor.visit_block(self),
             Node::Expression(..) => visitor.visit_expression(self),
             Node::Array { .. } => visitor.visit_array(self),
-
+            
             // declarations
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
@@ -179,9 +183,10 @@ impl Node {
             Node::NegOp(..) => visitor.visit_unary_op(self),
             Node::NotOp(..) => visitor.visit_unary_op(self),
             Node::Tuple(..) => visitor.visit_tuple(self),
-            Node::KeyValueTuple { .. } => visitor.visit_kv_tuple(self),
             Node::UnaryOperation { .. } => visitor.visit_unary_op(self),
             Node::TermOperation { .. } => visitor.visit_term_op(self),
+            Node::KeyValuePair { .. } => visitor.visit_kv_pair(self),
+            Node::KeyValueTuple { .. } => visitor.visit_kv_tuple(self),
         }
     }
 }

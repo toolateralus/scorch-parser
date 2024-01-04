@@ -110,7 +110,7 @@ fn parse_function(index: &mut usize, tokens: &Vec<Token>) -> Result<Node, PrsErr
     dbg!("end function declaration.");
     return Ok(Node::FuncDeclStmnt {
         id: Box::new(id),
-        params : params,
+        params : Box::new(params),
         return_t: Box::new(type_id),
         body: Box::new(block),
         mutable: false, // todo :: allow mutable function declarations?
