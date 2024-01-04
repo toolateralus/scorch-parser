@@ -10,20 +10,14 @@ pub const DYNAMIC_TNAME: &str = "dynamic";
 pub const FN_TNAME: &str = "fn";
 
 pub trait Visitor<T> {
-    fn visit_parameter(&mut self, node: &Node) -> T;
     fn visit_number(&mut self, node: &Node) -> T;
-    fn visit_term(&mut self, node: &Node) -> T;
     fn visit_factor(&mut self, node: &Node) -> T;
     fn visit_eof(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
     fn visit_function_decl(&mut self, node: &Node) -> T;
-    fn visit_function_call(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
     fn visit_while_stmnt(&mut self, node: &Node) -> T;
     fn visit_break_stmnt(&mut self, node: &Node) -> T;
-    fn visit_relational_expression(&mut self, node: &Node) -> T;
-    fn visit_logical_expression(&mut self, node: &Node) -> T;
-    fn visit_op_ovr_decl(&mut self, node: &Node) -> T;
     // unary operations
     fn visit_tuple(&mut self, node: &Node) -> T;
     fn visit_not_op(&mut self, node: &Node) -> T;
@@ -36,7 +30,6 @@ pub trait Visitor<T> {
     fn visit_identifier(&mut self, node: &Node) -> T;
     fn visit_bool(&mut self, node: &Node) -> T;
     fn visit_array(&mut self, node: &Node) -> T;
-    fn visit_array_access(&mut self, node: &Node) -> T;
     fn visit_type_assoc_block(&mut self, node: &Node) -> T;
     fn visit_if_stmnt(&mut self, node: &Node) -> T;
     fn visit_else_stmnt(&mut self, node: &Node) -> T;
@@ -56,17 +49,6 @@ pub enum Node {
     String(String),
     Identifier(String),
 
-    // Expressions
-    LogicalExpression {
-        lhs: Box<Node>,
-        op: TokenKind,
-        rhs: Box<Node>,
-    },
-    RelationalExpression {
-        lhs: Box<Node>,
-        op: TokenKind,
-        rhs: Box<Node>,
-    },
     BinaryOperation {
         lhs: Box<Node>,
         op: TokenKind,
@@ -113,7 +95,7 @@ pub enum Node {
         return_t: Box<Node>,
         mutable: bool,
     },
-    ParamDecl {
+    KeyValueTuple {
         varname: Box<Node>,
         typename: Box<Node>,
     },
@@ -149,7 +131,6 @@ impl Node {
             Node::Array { .. } => visitor.visit_array(self),
 
             // declarations
-            Node::ParamDecl { .. } => visitor.visit_parameter(self),
             Node::DeclStmt { .. } => visitor.visit_declaration(self),
             Node::StructDecl { .. } => visitor.visit_struct_def(self),
             Node::FuncDeclStmnt { .. } => visitor.visit_function_decl(self),
@@ -163,12 +144,11 @@ impl Node {
             Node::WhileStmnt { .. } => visitor.visit_while_stmnt(self),
 
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
-            Node::RelationalExpression { .. } => visitor.visit_relational_expression(self),
-            Node::LogicalExpression { .. } => visitor.visit_logical_expression(self),
 
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
             Node::Tuple(..) => visitor.visit_tuple(self),
+            Node::KeyValueTuple { .. } => todo!(),
         }
     }
 }

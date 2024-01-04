@@ -76,7 +76,7 @@ pub fn parse_parameters(tokens: &Vec<Token>, index: &mut usize) -> Result<Vec<No
             *index += 1;
         }
         
-        let param_decl_node = Node::ParamDecl {
+        let param_decl_node = Node::KeyValueTuple {
             varname: Box::new(varname),
             typename: Box::new(typename),
         };
