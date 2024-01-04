@@ -18,7 +18,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use lexer::{create_tokenizer, TokenProcessor};
-
+    
     use super::*;
 
     #[test]

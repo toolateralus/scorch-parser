@@ -16,14 +16,12 @@ pub trait Visitor<T> {
     fn visit_relational_op(&mut self, node: &Node) -> T;
     fn visit_logical_op(&mut self, node: &Node) -> T;
     fn visit_term_op(&mut self, node: &Node) -> T;
-    
     fn visit_unary_op(&mut self, node: &Node) -> T;
     fn visit_kv_tuple(&mut self, node: &Node) -> T;
-    
     fn visit_function_decl(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
     fn visit_while_stmnt(&mut self, node: &Node) -> T;
-    fn visit_break_stmnt(&mut self, node: &Node) -> T;
+    fn visit_return_stmnt(&mut self, node: &Node) -> T;
     // unary operations
     fn visit_tuple(&mut self, node: &Node) -> T;
     fn visit_not_op(&mut self, node: &Node) -> T;
@@ -165,7 +163,7 @@ impl Node {
             Node::TypeAssocBlockStmnt { .. } => visitor.visit_type_assoc_block(self),
             Node::IfStmnt { .. } => visitor.visit_if_stmnt(self),
             Node::ElseStmnt { .. } => visitor.visit_else_stmnt(self),
-            Node::ReturnStmnt(..) => visitor.visit_break_stmnt(self),
+            Node::ReturnStmnt(..) => visitor.visit_return_stmnt(self),
             Node::AssignStmnt { .. } => visitor.visit_assignment(self),
             Node::WhileStmnt { .. } => visitor.visit_while_stmnt(self),
 
