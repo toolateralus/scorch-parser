@@ -24,8 +24,6 @@ pub trait Visitor<T> {
     fn visit_return_stmnt(&mut self, node: &Node) -> T;
     // unary operations
     fn visit_tuple(&mut self, node: &Node) -> T;
-    fn visit_not_op(&mut self, node: &Node) -> T;
-    fn visit_neg_op(&mut self, node: &Node) -> T;
     fn visit_assignment(&mut self, node: &Node) -> T;
     fn visit_declaration(&mut self, node: &Node) -> T;
     fn visit_block(&mut self, node: &Node) -> T;
@@ -170,8 +168,8 @@ impl Node {
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
             Node::RelationalOperation { .. } => visitor.visit_relational_op(self),
             Node::LogicalOperation { .. } => visitor.visit_logical_op(self),
-            Node::NegOp(..) => visitor.visit_neg_op(self),
-            Node::NotOp(..) => visitor.visit_not_op(self),
+            Node::NegOp(..) => visitor.visit_unary_op(self),
+            Node::NotOp(..) => visitor.visit_unary_op(self),
             Node::Tuple(..) => visitor.visit_tuple(self),
             Node::KeyValueTuple { .. } => visitor.visit_kv_tuple(self),
             Node::UnaryOperation { .. } => visitor.visit_unary_op(self),
