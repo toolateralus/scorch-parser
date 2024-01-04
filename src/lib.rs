@@ -39,5 +39,8 @@ mod tests {
             Ok(_) => {}
             Err(err) => panic!("{:#?}", err),
         }
+        if let Ok(ast_root) = ast_root {
+            panic!("{:#?}", ast_root);
+        };
     }
 }

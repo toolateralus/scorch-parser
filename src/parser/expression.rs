@@ -265,10 +265,10 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             consume(tokens, index, TokenKind::OpenParenthesis);
             let args = parse_tuple(tokens,index)?;
             consume(tokens, index, TokenKind::CloseParenthesis);
-            Ok(Node::BinaryOperation { 
-                lhs: Box::new(typename), 
+            Ok(Node::BinaryOperation {
+                lhs: Box::new(typename),
                 op: TokenKind::New,
-                rhs: Box::new(args)
+                rhs: Box::new(args),
             })
         }
         TokenKind::Return => parse_return(index, tokens), 
@@ -284,12 +284,17 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
             // function calls
             TokenKind::OpenParenthesis => {
                 consume(tokens, index, TokenKind::OpenParenthesis);
-                // tuple declaration (i : string)
+                
+                // tuple declaration (i : string). handled elsewhere.
                 if lookahead(tokens, index, 2).kind == TokenKind::Colon {
                     break;
                 }
+                
+                // function invocation. arguments are just tuples in scorch.
                 let tuple = parse_tuple(tokens, index)?;
+                
                 consume(tokens, index, TokenKind::CloseParenthesis);
+                
                 bin_op(&mut left, op, &tuple)
             }
             TokenKind::Dot => {
