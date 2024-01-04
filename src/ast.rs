@@ -10,33 +10,41 @@ pub const DYNAMIC_TNAME: &str = "dynamic";
 pub const FN_TNAME: &str = "fn";
 
 pub trait Visitor<T> {
-    fn visit_number(&mut self, node: &Node) -> T;
-    fn visit_eof(&mut self, node: &Node) -> T;
+    
+    // unary operations
+    fn visit_tuple(&mut self, node: &Node) -> T;
+    
+    // binary operations & expressions, statements. hierarchy of parser.
+    fn visit_program(&mut self, node: &Node) -> T;
+    fn visit_block(&mut self, node: &Node) -> T;
+    fn visit_assignment(&mut self, node: &Node) -> T;
+    fn visit_expression(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
     fn visit_relational_op(&mut self, node: &Node) -> T;
     fn visit_logical_op(&mut self, node: &Node) -> T;
     fn visit_term_op(&mut self, node: &Node) -> T;
     fn visit_unary_op(&mut self, node: &Node) -> T;
-    fn visit_kv_tuple(&mut self, node: &Node) -> T;
-    fn visit_function_decl(&mut self, node: &Node) -> T;
-    fn visit_program(&mut self, node: &Node) -> T;
-    fn visit_while_stmnt(&mut self, node: &Node) -> T;
-    fn visit_return_stmnt(&mut self, node: &Node) -> T;
-    // unary operations
-    fn visit_tuple(&mut self, node: &Node) -> T;
-    fn visit_assignment(&mut self, node: &Node) -> T;
-    fn visit_declaration(&mut self, node: &Node) -> T;
-    fn visit_block(&mut self, node: &Node) -> T;
-    fn visit_expression(&mut self, node: &Node) -> T;
+    
+    // values
     fn visit_string(&mut self, node: &Node) -> T;
     fn visit_identifier(&mut self, node: &Node) -> T;
     fn visit_bool(&mut self, node: &Node) -> T;
     fn visit_array(&mut self, node: &Node) -> T;
+    fn visit_number(&mut self, node: &Node) -> T;
+    fn visit_kv_tuple(&mut self, node: &Node) -> T;
+    
+    // visitation terminator.
+    fn visit_eof(&mut self, node: &Node) -> T;
+    
+    //decl / keywords    
+    fn visit_declaration(&mut self, node: &Node) -> T;
+    fn visit_struct_def(&mut self, node: &Node) -> T;
+    fn visit_function_decl(&mut self, node: &Node) -> T;
     fn visit_type_assoc_block(&mut self, node: &Node) -> T;
+    fn visit_while_stmnt(&mut self, node: &Node) -> T;
+    fn visit_return_stmnt(&mut self, node: &Node) -> T;
     fn visit_if_stmnt(&mut self, node: &Node) -> T;
     fn visit_else_stmnt(&mut self, node: &Node) -> T;
-    fn visit_struct_def(&mut self, node: &Node) -> T;
-    fn visit_struct_init(&mut self, node: &Node) -> T;
 }
 #[derive(Debug, Clone)]
 pub enum Node {
