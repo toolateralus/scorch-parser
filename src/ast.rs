@@ -11,7 +11,6 @@ pub const FN_TNAME: &str = "fn";
 
 pub trait Visitor<T> {
     fn visit_number(&mut self, node: &Node) -> T;
-    fn visit_factor(&mut self, node: &Node) -> T;
     fn visit_eof(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
     fn visit_relational_op(&mut self, node: &Node) -> T;
