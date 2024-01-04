@@ -119,7 +119,7 @@ pub fn parse_decl_or_expr(
         }
         TokenKind::ColonEquals => {
             consume(tokens, index, TokenKind::ColonEquals);
-            parse_implicit_decl(index, tokens, Box::new(identifier), false)
+            parse_implicit_decl(index, tokens, Box::new(identifier), mutable)
         }
         TokenKind::Assignment => {
             consume(tokens, index, TokenKind::Assignment);
