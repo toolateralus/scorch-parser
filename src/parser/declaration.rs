@@ -1,8 +1,8 @@
 // declarations
 
 use super::super::*;
-use super::expression::{parse_block, parse_operand};
-use super::{debug::*, function::parse_parameters};
+use super::expression::{parse_operand};
+use super::{debug::*};
 use super::{expression::parse_expression, *};
 use crate::{
     ast::Node,
@@ -213,7 +213,7 @@ pub fn parse_struct_decl(index: &mut usize, tokens: &Vec<Token>) -> Result<Node,
     consume(tokens, index, TokenKind::Struct);
 
     let id = parse_operand(tokens, index);
-    let mut token = current_token(tokens, index);
+    let token = current_token(tokens, index);
 
     if token.kind != TokenKind::Pipe {
         return Err(PrsErr {

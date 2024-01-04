@@ -14,6 +14,13 @@ pub trait Visitor<T> {
     fn visit_factor(&mut self, node: &Node) -> T;
     fn visit_eof(&mut self, node: &Node) -> T;
     fn visit_binary_op(&mut self, node: &Node) -> T;
+    fn visit_relational_op(&mut self, node: &Node) -> T;
+    fn visit_logical_op(&mut self, node: &Node) -> T;
+    fn visit_term_op(&mut self, node: &Node) -> T;
+    
+    fn visit_unary_op(&mut self, node: &Node) -> T;
+    fn visit_kv_tuple(&mut self, node: &Node) -> T;
+    
     fn visit_function_decl(&mut self, node: &Node) -> T;
     fn visit_program(&mut self, node: &Node) -> T;
     fn visit_while_stmnt(&mut self, node: &Node) -> T;
@@ -48,12 +55,32 @@ pub enum Node {
     Double(f64),
     String(String),
     Identifier(String),
-
+    
     BinaryOperation {
         lhs: Box<Node>,
         op: TokenKind,
         rhs: Box<Node>,
     },
+    RelationalOperation {
+        lhs: Box<Node>,
+        op: TokenKind,
+        rhs: Box<Node>,
+    },
+    LogicalOperation {
+        lhs: Box<Node>,
+        op: TokenKind,
+        rhs: Box<Node>,
+    },
+    TermOperation {
+        lhs: Box<Node>,
+        op: TokenKind,
+        rhs: Box<Node>,
+    },
+    UnaryOperation {
+        operand: Box<Node>,
+        op: TokenKind,
+    },
+    
 
     // todo: do the same with Unary operations :
     // we can have a special noed for these instead of
@@ -144,11 +171,14 @@ impl Node {
             Node::WhileStmnt { .. } => visitor.visit_while_stmnt(self),
 
             Node::BinaryOperation { .. } => visitor.visit_binary_op(self),
-
+            Node::RelationalOperation { .. } => visitor.visit_relational_op(self),
+            Node::LogicalOperation { .. } => visitor.visit_logical_op(self),
             Node::NegOp(..) => visitor.visit_neg_op(self),
             Node::NotOp(..) => visitor.visit_not_op(self),
             Node::Tuple(..) => visitor.visit_tuple(self),
-            Node::KeyValueTuple { .. } => todo!(),
+            Node::KeyValueTuple { .. } => visitor.visit_kv_tuple(self),
+            Node::UnaryOperation { .. } => visitor.visit_unary_op(self),
+            Node::TermOperation { .. } => visitor.visit_term_op(self),
         }
     }
 }

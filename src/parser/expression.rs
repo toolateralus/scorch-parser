@@ -1,4 +1,4 @@
-use std::thread::current;
+
 
 use super::super::*;
 use super::debug::*;
@@ -126,7 +126,11 @@ pub fn parse_logical(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
                     vec![TokenKind::LogicalAnd, TokenKind::LogicalOr],
                 );
                 let right = parse_relational(tokens, index)?;
-                bin_op(&mut left, op, &right);
+                left = Node::LogicalOperation {
+                    lhs: Box::new(left),
+                    op: op.kind,
+                    rhs: Box::new(right),
+                };
             }
             _ => break,
         }
@@ -146,7 +150,11 @@ pub fn parse_relational(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, 
             | TokenKind::RightAngle => {
                 *index += 1;
                 let right = parse_bin_op(tokens, index)?;
-                bin_op(&mut left, op, &right);
+                left = Node::RelationalOperation {
+                    lhs: Box::new(left),
+                    op: op.kind,
+                    rhs: Box::new(right),
+                };
             }
             _ => break,
         }
@@ -161,7 +169,11 @@ pub fn parse_bin_op(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsE
             TokenKind::Add | TokenKind::Subtract => {
                 consume_next_if_any(tokens, index, vec![TokenKind::Add, TokenKind::Subtract]);
                 let right = parse_term(tokens, index)?;
-                bin_op(&mut left, op, &right);
+                left = Node::BinaryOperation {
+                    lhs: Box::new(left),
+                    op: op.kind,
+                    rhs: Box::new(right),
+                };
             }
             _ => break,
         }
@@ -176,7 +188,11 @@ pub fn parse_term(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
             TokenKind::Multiply | TokenKind::Divide => {
                 consume_next_if_any(tokens, index, vec![TokenKind::Multiply, TokenKind::Divide]);
                 let right = parse_unary(tokens, index)?;
-                bin_op(&mut left, token, &right);
+                left = Node::TermOperation {
+                    lhs: Box::new(left),
+                    op: token.kind,
+                    rhs: Box::new(right),
+                };
             }
             _ => break,
         }
@@ -190,18 +206,13 @@ pub fn parse_unary(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsEr
         TokenKind::Subtract | TokenKind::Not => {
             consume_next_if_any(tokens, index, vec![TokenKind::Subtract, TokenKind::Not]);
             let node = parse_operand(tokens, index)?;
-            let node_type = if op.kind == TokenKind::Subtract {
-                Node::NegOp
-            } else {
-                Node::NotOp
-            };
             
             assert!(
                 !(matches!(node, Node::NegOp(_)) || matches!(node, Node::NotOp(_))),
                 "Double not operations are not allowed"
             );
             
-            Ok(node_type(Box::new(node)))
+            Ok(Node::UnaryOperation{op : op.kind, operand : Box::new(node)})
         }
         _ => parse_operand(tokens, index),
     }
@@ -211,7 +222,6 @@ pub fn parse_type_name(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, P
     consume(tokens, index, TokenKind::Identifier);
     return Ok(Node::Identifier(token.value.clone()));
 }
-
 pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr> {
     let token = current_token(tokens, index);
     let mut left = match token.kind {
@@ -313,7 +323,6 @@ pub fn parse_operand(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, Prs
     
     Ok(left)
 }
-
 pub fn bin_op<'a>(left: &'a mut Node, op: &'a Token, right: &'a Node) {
     *left = Node::BinaryOperation {
         lhs: Box::new(left.clone()),

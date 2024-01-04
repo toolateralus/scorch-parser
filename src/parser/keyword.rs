@@ -195,7 +195,7 @@ pub fn parse_else(tokens: &Vec<Token>, index: &mut usize) -> Result<Node, PrsErr
     // if else with comparison -> if ... {} else ... {}
     else {
         let else_condition = parse_expression(tokens, index)?;
-        let cur = current_token(tokens, index);
+        let _cur = current_token(tokens, index);
 
         let else_block = parse_block(tokens, index)?;
 
