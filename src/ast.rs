@@ -47,7 +47,7 @@ pub trait Visitor<T> {
     fn visit_if_stmnt(&mut self, node: &Node) -> T;
     fn visit_else_stmnt(&mut self, node: &Node) -> T;
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Node {
     Program(Vec<Box<Node>>),
     Block(Vec<Box<Node>>),

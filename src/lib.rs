@@ -5,6 +5,7 @@ use crate::parser::expression;
 pub mod ast;
 pub mod lexer;
 pub mod parser;
+mod unittests;
 fn main() {
     let mut file = File::open("src/tests.scorch").expect("Failed to open file");
     let mut input = String::new();

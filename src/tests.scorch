@@ -1,10 +1,10 @@
-ff_addition := 5.3 + 6.2
 
 x := new Class()
 
 x.members.owner_id = none
 x.cached.last = x.y()
 xaryu := new Xar(x.y.z == z.x)
+ff_addition := 5.3 + 6.2
 
 
 assert(x.funcy_test() == 100, 'failed to call funcy_test')
